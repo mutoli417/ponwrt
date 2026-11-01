@@ -22,7 +22,8 @@ sed -i "s|'%s.%05d~%s'|'%s.%05d'|" "$LUCI_MK"
 sed -i 's|"$$secs" "$$2"|"$$secs"|' "$LUCI_MK"
 
 
-if grep -q "printf '%s.%05d' "\$\$yday" "\$\$secs";" "$LUCI_MK"; then
+# After both seds the findrev() printf line ends with:  printf '%s.%05d' "$$yday" "$$secs";
+if grep -q '"$$secs";' "$LUCI_MK"; then
 	echo "LuCI version suffix removed -> clean version (no hash, no extra arg)"
 else
 	echo "ERROR: LuCI version pattern not found in $LUCI_MK" >&2
