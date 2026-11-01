@@ -55,6 +55,7 @@ jobs:
 
       - name: Configure
         run: |
+          bash scripts/patch-luci-version.sh
           ./scripts/kconfig.pl + configs/an7581.config configs/release.config > .config
           bash scripts/gen-pure-config.sh
           make defconfig
@@ -67,7 +68,7 @@ jobs:
         run: make download -j"$(nproc)"
 
       - name: Build
-        run: make -j"$(nproc)"
+        run: make -j"$(nproc)" VERSION_CODE="mutoli"
 
       - name: Pack
         run: |
