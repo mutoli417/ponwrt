@@ -1,0 +1,113 @@
+name: Build HG5382A Pure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-hg5382a-pure
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build an7581 HG5382A pure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free build space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo apt-get clean
+
+      - name: Install build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            asciidoc autoconf automake autopoint binutils bison build-essential \
+            bzip2 ccache clang cmake cpio curl device-tree-compiler flex gawk \
+            gettext git g++-multilib gcc-multilib gperf help2man intltool \
+            libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev \
+            libmpfr-dev libncurses-dev libpython3-dev libreadline-dev libssl-dev \
+            libtool libyaml-dev lld llvm ninja-build p7zip-full patch pkgconf \
+            python3 python3-docutils python3-pip python3-ply python3-pyelftools \
+            qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo \
+            uglifyjs unzip wget xmlto xxd zlib1g-dev zstd
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: dl
+          key: ponwrt-dl-an7581-pure-${{ hashFiles('feeds.conf.default', 'configs/*.config') }}
+          restore-keys: |
+            ponwrt-dl-
+
+      - name: Install feeds
+        run: |
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Configure
+        run: |
+          bash scripts/patch-luci-version.sh
+          ./scripts/kconfig.pl + configs/an7581.config configs/release.config > .config
+          bash scripts/gen-pure-config.sh
+          make defconfig
+          echo "----- target device / package summary -----"
+          grep -E 'CONFIG_TARGET_DEVICE_airoha|fiberhome_hg5382a' .config || true
+          echo "----- removed other-device packages -----"
+          grep -E 'mt7915|mt7916|rtl826x|luci-app-iptv|phy-maxlinear|phy-realtek' .config || true
+
+      - name: Diagnostic luci-lib-uqr
+        run: |
+          echo "===== patched luci.mk findrev ====="
+          grep -n "printf" feeds/luci/luci.mk || true
+          echo "===== luci package version dry-run ====="
+          make package/feeds/luci/luci-lib-uqr/compile -n V=s 2>&1 | head -60 || true
+          echo "===== GIT / VERSION DIAG ====="
+          git rev-parse HEAD
+          git log -1 --format='HEAD %H %ct %s'
+          git rev-parse --abbrev-ref HEAD
+          git rev-parse --verify --symbolic-full-name HEAD@{u} 2>&1 | head -2 || true
+          echo "--- getver ---"
+          ./scripts/getver.sh || true
+          echo "--- source_date_epoch ---"
+          ./scripts/get_source_date_epoch.sh || true
+          echo "--- make vars ---"
+          make -s var.VERSION_CODE 2>&1 | head -5 || true
+          make -s var.REVISION 2>&1 | head -5 || true
+          make -s var.SOURCE_DATE_EPOCH 2>&1 | head -5 || true
+          echo "--- .config version lines ---"
+          grep -i "VERSION" .config | head -20 || true
+          echo "--- feeds luci HEAD ---"
+          git -C feeds/luci log -1 --format='%H %ct %s' 2>&1 || true
+          echo "===== diagnostic done ====="
+
+      - name: Download sources
+        run: make download -j"$(nproc)"
+
+      - name: Build
+        run: make -j"$(nproc)" BUILD_LOG=1 VERSION_CODE="mutoli"
+
+      - name: Pack
+        run: |
+          mkdir -p release
+          tar --zstd -cf release/ponwrt-hg5382a-pure.tar.zst \
+            -C bin/targets/airoha an7581
+          (cd release && sha256sum *.tar.zst > sha256sums)
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ponwrt-hg5382a-pure
+          path: |
+            release/*.tar.zst
+            release/sha256sums
+          if-no-files-found: error
+          retention-days: 30
