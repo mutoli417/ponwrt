@@ -59,6 +59,10 @@ jobs:
           ./scripts/kconfig.pl + configs/an7581.config configs/release.config > .config
           bash scripts/gen-pure-config.sh
           make defconfig
+          # force VERSION_CODE (version.mk only reads CONFIG_VERSION_CODE)
+          sed -i '/^CONFIG_VERSION_CODE=/d' .config 2>/dev/null || true
+          sed -i '/^# CONFIG_VERSION_CODE is not set/d' .config 2>/dev/null || true
+          echo 'CONFIG_VERSION_CODE="mutoli"' >> .config
           echo "----- target device / package summary -----"
           grep -E 'CONFIG_TARGET_DEVICE_airoha|fiberhome_hg5382a' .config || true
           echo "----- removed other-device packages -----"
