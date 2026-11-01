@@ -1,6 +1,8 @@
 name: Build HG5382A Pure
 
 on:
+
+on:
   workflow_dispatch:
 
 permissions:
@@ -64,11 +66,19 @@ jobs:
           echo "----- removed other-device packages -----"
           grep -E 'mt7915|mt7916|rtl826x|luci-app-iptv|phy-maxlinear|phy-realtek' .config || true
 
+      - name: Diagnostic luci-lib-uqr
+        run: |
+          echo "===== patched luci.mk findrev ====="
+          grep -n "printf" feeds/luci/luci.mk || true
+          echo "===== luci package version dry-run ====="
+          make package/feeds/luci/luci-lib-uqr/compile -n V=s 2>&1 | head -60 || true
+          echo "===== diagnostic done ====="
+
       - name: Download sources
         run: make download -j"$(nproc)"
 
       - name: Build
-        run: make -j"$(nproc)" VERSION_CODE="mutoli"
+        run: make -j"$(nproc)" BUILD_LOG=1 VERSION_CODE="mutoli"
 
       - name: Pack
         run: |
