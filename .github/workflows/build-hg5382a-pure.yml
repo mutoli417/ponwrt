@@ -70,6 +70,23 @@ jobs:
           grep -n "printf" feeds/luci/luci.mk || true
           echo "===== luci package version dry-run ====="
           make package/feeds/luci/luci-lib-uqr/compile -n V=s 2>&1 | head -60 || true
+          echo "===== GIT / VERSION DIAG ====="
+          git rev-parse HEAD
+          git log -1 --format='HEAD %H %ct %s'
+          git rev-parse --abbrev-ref HEAD
+          git rev-parse --verify --symbolic-full-name HEAD@{u} 2>&1 | head -2 || true
+          echo "--- getver ---"
+          ./scripts/getver.sh || true
+          echo "--- source_date_epoch ---"
+          ./scripts/get_source_date_epoch.sh || true
+          echo "--- make vars ---"
+          make -s var.VERSION_CODE 2>&1 | head -5 || true
+          make -s var.REVISION 2>&1 | head -5 || true
+          make -s var.SOURCE_DATE_EPOCH 2>&1 | head -5 || true
+          echo "--- .config version lines ---"
+          grep -i "VERSION" .config | head -20 || true
+          echo "--- feeds luci HEAD ---"
+          git -C feeds/luci log -1 --format='%H %ct %s' 2>&1 || true
           echo "===== diagnostic done ====="
 
       - name: Download sources
