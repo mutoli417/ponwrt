@@ -1,8 +1,6 @@
 name: Build HG5382A Pure
 
 on:
-
-on:
   workflow_dispatch:
 
 permissions:
