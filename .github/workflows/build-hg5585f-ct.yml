@@ -59,13 +59,20 @@ jobs:
 
       - name: Configure
         run: |
+          bash scripts/patch-luci-version.sh
           ./scripts/kconfig.pl + configs/an7581.config configs/release.config > .config
           bash scripts/gen-hg5585f-config.sh
           make defconfig
+          # force VERSION_CODE (version.mk only reads CONFIG_VERSION_CODE)
+          sed -i '/^CONFIG_VERSION_CODE=/d' .config 2>/dev/null || true
+          sed -i '/^# CONFIG_VERSION_CODE is not set/d' .config 2>/dev/null || true
+          echo 'CONFIG_VERSION_CODE="mutoli"' >> .config
           echo "----- target device -----"
           grep -E 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE' .config || true
           echo "----- plugin symbols -----"
           grep -E 'ssr-plus|passwall' .config || true
+          echo "----- version -----"
+          grep -E 'CONFIG_VERSION_CODE' .config || true
 
       - name: Download sources
         run: make download -j"$(nproc)"
