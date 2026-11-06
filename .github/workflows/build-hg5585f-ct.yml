@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build an7581 HG5585F CT with SSR Plus+ and PassWall
+    name: Build an7581 HG5585F CT with SSR Plus+ 
     runs-on: ubuntu-24.04
     timeout-minutes: 360
 
@@ -70,7 +70,7 @@ jobs:
           echo "----- target device -----"
           grep -E 'CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE' .config || true
           echo "----- plugin symbols -----"
-          grep -E 'ssr-plus|passwall' .config || true
+          grep -E 'ssr-plus' .config || true
           echo "----- version -----"
           grep -E 'CONFIG_VERSION_CODE' .config || true
 
