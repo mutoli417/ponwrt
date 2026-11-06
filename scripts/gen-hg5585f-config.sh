@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build configuration for FiberHome HG5585F CT:
 #   keep the device's stock feature set (Wi-Fi, PON, USB, wpad) and add
-#   ShadowsocksR Plus+ (with Simplified Chinese translation) plus PassWall.
+#   ShadowsocksR Plus+ (with Simplified Chinese translation) plus .
 # The helloworld feed is appended last in feeds.conf.default so the official
 # packages/luci feeds win on duplicate package names; helloworld only supplies
 # luci-app-ssr-plus and its unique dependencies (e.g. shadowsocksr-libev).
@@ -34,10 +34,4 @@ enable_sym CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Libev_Client
 enable_sym CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Xray
 enable_sym CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ChinaDNS_NG
 
-# 4. PassWall and its Simplified Chinese translation.
-#    PassWall's own default aarch64 options (Xray, sing-box, smartdns,
-#    shadowsocks-rust, simple-obfs, geoview, haproxy) stay enabled via defconfig.
-enable_sym CONFIG_PACKAGE_luci-app-passwall
-enable_sym CONFIG_PACKAGE_luci-i18n-passwall-zh-cn
-
-echo "HG5585F CT + ShadowsocksR Plus+ + PassWall configuration ready."
+echo "HG5585F CT + ShadowsocksR Plus+  configuration ready."
