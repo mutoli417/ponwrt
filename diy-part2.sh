@@ -7,7 +7,7 @@
 #   4) 固件版本追加作者与构建时间
 # ================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 echo "=========================================="
 echo "默认值定制：时区 + 5G WiFi (diy-part2.sh)"
@@ -927,7 +927,7 @@ chmod +x files/etc/uci-defaults/98-hide-version
 echo "✅ 版本隐藏 uci-defaults 脚本已写入（双重保险）"
 
 # 用 -f 不要用 -x：git checkout / Windows 打包会丢可执行位，-x 判失败会静默整段跳过。
-# 末尾 || true：本文件开头是 set -euo pipefail，被 source 的子脚本里任何一步
+# 末尾 || true：本文件开头是 set -uo pipefail，被 source 的子脚本里任何一步
 # 返回非 0 都会让这里当场退出，后面的步骤全不执行且整轮构建中断。
 # 加密是可选增强，不该有能力搞挂构建。
 [ -f scripts/diy-part2-crypto.sh ] && . ./scripts/diy-part2-crypto.sh || true
