@@ -1,37 +1,33 @@
 #!/bin/bash
-# Build configuration for FiberHome HG5585F CT:
-#   keep the device's stock feature set (Wi-Fi, PON, USB, wpad) and add
-#   ShadowsocksR Plus+ (with Simplified Chinese translation) plus .
-# The helloworld feed is appended last in feeds.conf.default so the official
-# packages/luci feeds win on duplicate package names; helloworld only supplies
-# luci-app-ssr-plus and its unique dependencies (e.g. shadowsocksr-libev).
-set -e
+set -euo pipefail
+WS="${GITHUB_WORKSPACE:-.}"
+PROFILE="${PROFILE:-fiberhome_hg5585f-ct}"
 
-enable_sym() {
-	local sym="$1"
-	if grep -q "^# ${sym} is not set" .config; then
-		sed -i "s|^# ${sym} is not set|${sym}=y|" .config
-	elif grep -q "^${sym}=" .config; then
-		sed -i "s|^${sym}=.*|${sym}=y|" .config
-	else
-		printf '%s=y\n' "$sym" >> .config
-	fi
-}
+case "$PROFILE" in
+  fiberhome_hg5382a)
+    DEVICE="fiberhome_hg5382a"
+    CFG="configs/fiberhome_hg5382a.config"
+    ;;
+  fiberhome_hg5585f-ct|*)
+    DEVICE="fiberhome_hg5585f-ct"
+    CFG="configs/fiberhome_hg5585f-ct.config"
+    ;;
+esac
 
-# 1. Keep only the HG5585F CT device: comment out every enabled device, then re-enable the target.
-sed -i -E 's|^(CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_.*)=y$|# \1 is not set|' .config
-enable_sym CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_fiberhome_hg5585f-ct
+echo "== 生成配置: $DEVICE =="
 
-# 2. ShadowsocksR Plus+ and its Simplified Chinese translation.
-enable_sym CONFIG_PACKAGE_luci-app-ssr-plus
-enable_sym CONFIG_PACKAGE_luci-i18n-ssr-plus-zh-cn
+# 先清除所有机型配置，只保留目标机型（避免全机型编译）
+sed -i '/CONFIG_TARGET_DEVICE_/d; /^CONFIG_TARGET_MULTI_PROFILE=/d' .config
 
-# 3. ShadowsocksR Plus+ cores so it works out of the box:
-#    SSR-libev client (the signature core), Xray, and ChinaDNS-NG.
-#    The nftables transparent-proxy backend is selected automatically by
-#    defconfig because this image uses firewall4.
-enable_sym CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Libev_Client
-enable_sym CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Xray
-enable_sym CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ChinaDNS_NG
+{
+  echo "CONFIG_TARGET_MULTI_PROFILE=y"
+  echo "CONFIG_TARGET_DEVICE_airoha_an7581_DEVICE_${DEVICE}=y"
+  echo "CONFIG_TARGET_DEVICE_PACKAGES_airoha_an7581_DEVICE_${DEVICE}=\"\""
+} >> .config
 
-echo "HG5585F CT + ShadowsocksR Plus+  configuration ready."
+if [ -f "$WS/$CFG" ]; then
+  cat "$WS/$CFG" >> .config
+  echo "✅ 已追加 $CFG"
+else
+  echo "::warning::未找到 $WS/$CFG"
+fi
