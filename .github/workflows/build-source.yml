@@ -231,7 +231,12 @@ jobs:
           fi
           
           # 生成最终配置
-          make defconfig
+           make defconfig
+
+          # 强制确保状态插件 + 全部依赖配置正确（防止被 defconfig 剔除）
+          echo "🔒 强制确保状态插件 + 全部依赖配置（defconfig 后）..."
+
+          done
 
           # 强制确保状态插件 + 全部依赖配置正确（防止被 defconfig 剔除）
           echo "🔒 强制确保状态插件 + 全部依赖配置（defconfig 后）..."
