@@ -119,7 +119,7 @@ jobs:
           if [ ! -d "$PKG_DIR/luci-app-natmode" ] || [ ! -d "$PKG_DIR/luci-app-pon-status" ]; then
             echo "--- 克隆 luci-app monorepo（natmode + pon-status）---"
             LUCI_APP_TMP="$(mktemp -d)/luci-app"
-            git clone --depth 1 https://github.com/qwe-qaq/luci-app "$LUCI_APP_TMP" main
+            git clone --depth 1 -b main https://github.com/qwe-qaq/luci-app "$LUCI_APP_TMP"
             for p in luci-app-natmode luci-app-pon-status; do
               rm -rf "$PKG_DIR/$p"
               cp -r "$LUCI_APP_TMP/$p" "$PKG_DIR/"
