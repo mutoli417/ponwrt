@@ -127,7 +127,31 @@ jobs:
             rm -rf "$LUCI_APP_TMP"
           fi
 
-          echo "✅ 状态插件已拉取完成"
+                echo "✅ 状态插件已拉取完成"
+
+          # =========================================================
+          # 修复状态插件依赖：去掉缺失的依赖，防止 defconfig 剔除
+          # =========================================================
+          echo "--- 修复状态插件依赖（去掉缺失的依赖）---"
+
+          # luci-app-airoha-npu: 去掉 @TARGET_airoha 条件
+          if [ -f "$PKG_DIR/luci-app-airoha-npu/Makefile" ]; then
+            sed -i 's/LUCI_DEPENDS:=+luci-base @TARGET_airoha/LUCI_DEPENDS:=+luci-base/' "$PKG_DIR/luci-app-airoha-npu/Makefile"
+            echo "  ✅ luci-app-airoha-npu: 已去掉 @TARGET_airoha"
+          fi
+
+          # luci-app-natmode: 去掉 +firewall4 +kmod-nft-fullcone
+          if [ -f "$PKG_DIR/luci-app-natmode/Makefile" ]; then
+            sed -i 's/LUCI_DEPENDS:=+luci-base +firewall4 +kmod-nft-fullcone/LUCI_DEPENDS:=+luci-base/' "$PKG_DIR/luci-app-natmode/Makefile"
+            echo "  ✅ luci-app-natmode: 已去掉 firewall4 + kmod-nft-fullcone"
+          fi
+
+          # luci-app-pon-status: 去掉 +luci-mod-status +airoha-ponctl +jsonfilter +rpcd-mod-file
+          if [ -f "$PKG_DIR/luci-app-pon-status/Makefile" ]; then
+            sed -i 's/LUCI_DEPENDS:=+luci-base +luci-mod-status +airoha-ponctl +jsonfilter +rpcd-mod-file/LUCI_DEPENDS:=+luci-base/' "$PKG_DIR/luci-app-pon-status/Makefile"
+            echo "  ✅ luci-app-pon-status: 已去掉所有额外依赖"
+          fi
+
 
           # =========================================================
           # 修复状态插件依赖：去掉缺失的依赖，防止 defconfig 剔除
