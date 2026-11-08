@@ -568,6 +568,9 @@ jobs:
           echo "🔒 强制启用 SSR Plus+..."
           sed -i '/luci-app-ssr-plus/d' .config 2>/dev/null || true
           echo "CONFIG_PACKAGE_luci-app-ssr-plus=y" >> .config
+          # 安装 SSR Plus+ 依赖的内核（避免没有内核导致反复重启）
+          echo "CONFIG_PACKAGE_xray-core=y" >> .config
+          echo "CONFIG_PACKAGE_sing-box=y" >> .config
 
           # 优化：禁用 SSR Plus+ 首启时的防火墙规则修改，避免 WiFi 能连但不能上网
           echo "🔧 优化 SSR Plus+ 首启配置（删除 uci-defaults 防火墙脚本）..."
