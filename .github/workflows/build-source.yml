@@ -169,6 +169,12 @@ jobs:
             unzip -o custom-packages.zip
             echo "✅ 自定义插件目录:"
             ls -la package/custom/
+            # 给所有 RPC 后端脚本设置执行权限（zip 解压会丢失权限）
+            echo "🔧 设置 RPC 文件执行权限..."
+            find package/custom/ -path "*/libexec/rpcd/*" -type f -exec chmod +x {} \;
+            find package/custom/ -path "*/usr/sbin/*" -type f -exec chmod +x {} \;
+            find package/custom/ -path "*/etc/init.d/*" -type f -exec chmod +x {} \;
+            echo "✅ 执行权限设置完成"
           else
             echo "⚠️  custom-packages.zip 不存在，跳过"
           fi
