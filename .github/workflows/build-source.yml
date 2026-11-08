@@ -199,8 +199,8 @@ jobs:
           echo "========================================"
           echo "SoC      : $SOC"
           echo "Profile  : $PROFILE"
-          echo "Source   : ${SOURCE} (${REPO_URL})"
-          echo "Branch   : ${REPO_BRANCH}"
+          echo "Source   : ponwrt (self)"
+          echo "Branch   : master"
           echo "Scope    : ${BUILD_SCOPE}"
           echo "Author   : ${FW_AUTHOR}"
           echo "Crypto   : ARM64CE=${OPT_CRYPTO_ARM64CE} CHACHA=${OPT_CRYPTO_CHACHA} EIP93=${OPT_CRYPTO_EIP93}"
@@ -1189,10 +1189,7 @@ jobs:
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
           name: OpenWrt_bin_${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-          # 必须用绝对路径：openwrt/bin 是 $GITHUB_WORKSPACE 下的符号链接
-          # （Clone source code 步骤 ln -sf 建的），upload-artifact 遍历
-          # 符号链接目录不可靠，可能传一个空包。
-          path: ${{ env.BUILD_ROOT }}/openwrt/bin
+          path: $GITHUB_WORKSPACE/bin
 
       # =========================================================
       # 21. 整理并上传固件
@@ -1229,7 +1226,7 @@ jobs:
           # 固定 tag：机型 + 分支，不含时间戳、不含作者
           # 同一机型/分支再次编译时，softprops/action-gh-release 会更新
           # 这个已存在的 Release（同名固件自动覆盖），不会新建版本。
-          RELEASE_TAG=$(echo "${DEVICE_NAME}-${REPO_BRANCH}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          RELEASE_TAG=$(echo "${DEVICE_NAME}-master" | sed 's/[^a-zA-Z0-9._-]/-/g')
           echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
 
           touch release.txt
@@ -1242,9 +1239,9 @@ jobs:
             echo "| 机型 | \`${PROFILE}\` |"
             echo "| SoC | \`${SOC}\` |"
             echo "| 作者 | \`${FW_AUTHOR}\` |"
-            echo "| 源码 | ${REPO_URL} |"
-            echo "| 分支 | \`${REPO_BRANCH}\` |"
-            echo "| 提交 | \`$(cd "$GITHUB_WORKSPACE"/openwrt && git rev-parse --short HEAD)\` |"
+            echo "| 源码 | ponwrt (self) |"
+            echo "| 分支 | \`master\` |"
+            echo "| 提交 | \`$(cd "$GITHUB_WORKSPACE" && git rev-parse --short HEAD)\` |"
             echo "| 编译时间 | $(date '+%Y-%m-%d %H:%M:%S') (Shanghai) |"
             echo "| 加密加速 | ARM64CE=${OPT_CRYPTO_ARM64CE} / ChaCha=${OPT_CRYPTO_CHACHA} / EIP93=${OPT_CRYPTO_EIP93} |"
             echo ""
