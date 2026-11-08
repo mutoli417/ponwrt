@@ -412,7 +412,7 @@ jobs:
         uses: actions/cache/restore@v5
         continue-on-error: true
         with:
-          path: /workdir/openwrt/dl
+          path: /workdir/dl
           # 按分支 + 周号：同一周内复用同一条目。
           # 原先用 github.run_number → 每次运行都 save 一份新副本，
           # 10GB 配额会被迅速刷满并淘汰掉有用的旧缓存。
@@ -1064,7 +1064,7 @@ jobs:
         continue-on-error: true
         with:
           key: ponwrt-dl-${{ env.SOURCE_SLUG }}-${{ github.event.inputs.branch || 'master' }}-${{ steps.resolve.outputs.week }}
-          path: /workdir/openwrt/dl
+          path: /workdir/dl
 
       # =========================================================
       # 18. 编译固件
@@ -1211,7 +1211,7 @@ jobs:
         id: organize
         if: env.UPLOAD_FIRMWARE == 'true' && steps.compile.outputs.status == 'success'
         run: |
-          cd "$GITHUB_WORKSPACE"/openwrt/bin/targets/*/*
+          cd "$GITHUB_WORKSPACE"/bin/targets/*/*
           rm -rf packages
           echo "FIRMWARE=$PWD" >> "$GITHUB_ENV"
           echo "status=success" >> "$GITHUB_OUTPUT"
