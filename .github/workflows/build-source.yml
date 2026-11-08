@@ -555,6 +555,12 @@ jobs:
           sed -i '/luci-app-ssr-plus/d' .config 2>/dev/null || true
           echo "CONFIG_PACKAGE_luci-app-ssr-plus=y" >> .config
 
+          # 优化：禁用 SSR Plus+ 首启时的防火墙规则修改，避免 WiFi 能连但不能上网
+          echo "🔧 优化 SSR Plus+ 首启配置（删除 uci-defaults 防火墙脚本）..."
+          # 删除 SSR Plus+ 的 uci-defaults 脚本，首启时不自动配置防火墙
+          find package/feeds -path "*luci-app-ssr-plus*" -name "*.sh" -path "*uci-defaults*" -type f -exec rm -f {} \; 2>/dev/null || true
+          find package/feeds -path "*ssr-plus*" -path "*uci-defaults*" -type f -exec rm -f {} \; 2>/dev/null || true
+
           # 固件版本隐藏已在本步骤开头由 scripts/patch-luci-version.sh 完成：
           # 把 10_system.js 的固件版本整行（含标签）从 fields 数组删除。LuCI 版本
           # 是运行时 RPC 动态拼接的（源码无 "LuCI Master" 字面量），文本删除无效。
