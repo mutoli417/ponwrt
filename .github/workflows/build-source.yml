@@ -12,7 +12,6 @@ env:
   PREBUILT_HOST: ${{ github.event.inputs.prebuilt_host == 'false' && 'false' || 'true' }}
   HOST_MODE: ${{ github.event.inputs.prebuilt_host == 'false' && 'source' || 'prebuilt' }}
   RUST_PIN_FEED: false
-  CACHE_ROOT: $GITHUB_WORKSPACE
   CACHE_RELEASE: cache-backup
   RELEASE_BACKUP: ${{ github.event.inputs.release_backup == 'false' && 'false' || 'true' }}
   TZ: Asia/Shanghai
@@ -163,6 +162,8 @@ jobs:
       - name: Extract custom packages (status plugins)
         run: |
           cd "$GITHUB_WORKSPACE"
+          # 动态设置 CACHE_ROOT 环境变量（env 里的 $GITHUB_WORKSPACE 不会被展开）
+          echo "CACHE_ROOT=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
           if [ -f custom-packages.zip ]; then
             echo "📦 解压自定义插件包..."
             unzip -o custom-packages.zip
