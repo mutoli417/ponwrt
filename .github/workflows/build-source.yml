@@ -660,12 +660,11 @@ jobs:
           if [ -f scripts/patch-luci-cpuusage.sh ]; then
             PONWRT_DIR=. bash scripts/patch-luci-cpuusage.sh || true
           fi
-          # 刷机后默认时区：Asia/Shanghai
-          echo "🔧 设置默认时区 Asia/Shanghai..."
-          mkdir -p files/etc/uci-defaults
-          cat > files/etc/uci-defaults/99-timezone-cn <<'EOF'
-          
-          echo "CONFIG_PACKAGE_$pkg=y" >> .config
+          # 强制启用 IPTV 相关包
+          echo "🔒 强制启用 IPTV 相关包..."
+          for pkg in luci-app-iptv luci-i18n-iptv-zh-cn; do
+            sed -i "/$pkg/d" .config 2>/dev/null || true
+            echo "CONFIG_PACKAGE_$pkg=y" >> .config
           done
           
           # 搜索包含版本信息的文件
