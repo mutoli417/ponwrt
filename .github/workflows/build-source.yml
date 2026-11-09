@@ -12,7 +12,8 @@ env:
   PREBUILT_HOST: ${{ github.event.inputs.prebuilt_host == 'false' && 'false' || 'true' }}
   HOST_MODE: ${{ github.event.inputs.prebuilt_host == 'false' && 'source' || 'prebuilt' }}
   RUST_PIN_FEED: false
-  CACHE_RELEASE: cache-backuTZ: Asia/Shanghai
+  CACHE_RELEASE: cache-backup
+  TZ: Asia/Shanghai
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   SOC: ${{ github.event.inputs.soc || 'an7581' }}
   PROFILE: ${{ github.event.inputs.profile || 'fiberhome_hg5585f-ct' }}
