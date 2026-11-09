@@ -36,26 +36,25 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Free build space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          sudo apt-get clean
-
-      - name: Install build dependencies
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            asciidoc autoconf automake autopoint binutils bison build-essential \
-            bzip2 ccache clang cmake cpio curl device-tree-compiler flex gawk \
-            gettext git g++-multilib gcc-multilib gperf help2man intltool \
-            libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev \
-            libmpfr-dev libncurses-dev libpython3-dev libreadline-dev libssl-dev \
-            libtool libyaml-dev lld llvm ninja-build p7zip-full patch pkgconf \
-            python3 python3-docutils python3-pip python3-ply python3-pyelftools \
-            qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo \
-            uglifyjs unzip wget xmlto xxd zlib1g-dev zstd
+      # =========================================================
+      # 环境准备 —— 与 Build PonWrt 共用 .github/actions/setup-build-env
+      #   差异通过 input 表达：
+      #     deps-profile       full（Release 原来那套完整依赖）
+      #     clean-level        basic（只删 3 个大件，不 prune docker / purge snapd）
+      #     setup-swap         false（原来不建 swap）
+      #     init-script        false（原来不跑 init 脚本）
+      #     timezone           ""（原来不设时区）
+      #     fail-on-apt-error  true（apt install 失败即退出）
+      # =========================================================
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
+        with:
+          deps-profile: full
+          clean-level: basic
+          setup-swap: 'false'
+          init-script: 'false'
+          timezone: ''
+          fail-on-apt-error: 'true'
 
       - name: Cache downloads
         uses: actions/cache@v4
@@ -88,14 +87,31 @@ jobs:
           make defconfig
 
       - name: Download sources
-        run: make download -j"$(nproc)"
+        run: |
+          # 加 3 次重试；成功路径与原单次调用一致，失败更可恢复
+          OK=0
+          for i in 1 2 3; do
+            echo "===== 第 $i 次尝试: make download ====="
+            if make download -j"$(nproc)"; then OK=1; break; fi
+            echo "::warning::第 $i 次 make download 失败，5 秒后重试"
+            sleep 5
+          done
+          if [ "$OK" -ne 1 ]; then
+            echo "::error::make download 连试 3 次仍失败"
+            exit 1
+          fi
 
       - name: Build ${{ matrix.target }}
         run: make -j"$(nproc)"
 
       - name: Pack ${{ matrix.target }}
         run: |
-          mkdir release
+          # 先确认构建产物存在，避免 tar 在目录缺失时给出晦涩错误
+          test -d "bin/targets/airoha/${{ matrix.target }}" || {
+            echo "::error::构建产物目录 bin/targets/airoha/${{ matrix.target }} 不存在"
+            exit 1
+          }
+          mkdir -p release
           tar --zstd -cf "release/ponwrt-${{ matrix.target }}.tar.zst" \
             -C bin/targets/airoha "${{ matrix.target }}"
 
