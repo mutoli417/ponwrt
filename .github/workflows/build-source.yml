@@ -1108,27 +1108,26 @@ jobs:
       #   同 key 已存在会报 already exists，continue-on-error 兜住，属正常。
       # =========================================================
       
-      - name: Replace apk mirror with USTC (late stage)
+      - name: Clear apk sources (third-party firmware)
         run: |
           cd "$GITHUB_WORKSPACE/openwrt"
           
-          echo "🔍 后期替换：扫描编译生成的 apk 配置文件..."
+          echo "🔍 清空 apk 软件源配置（第三方固件，官方源不可用）..."
           
-          # 1. 找 bin 目录下所有生成的配置文件
-          find bin/ -name "*.list" -o -name "*.repositories" -o -name "*.conf" 2>/dev/null | while read f; do
-            echo "  📄 处理: $f"
-            sed -i 's|downloads.immortalwrt.org|mirrors.ustc.edu.cn/immortalwrt|g' "$f"
-            sed -i 's|downloads.openwrt.org|mirrors.ustc.edu.cn/openwrt|g' "$f"
+          # 找所有生成的 apk 配置文件，清空内容
+          find bin/ -name "*.list" -o -name "*.repositories" 2>/dev/null | while read f; do
+            echo "  📄 清空: $f"
+            > "$f"
           done
           
-          # 2. 找 rootfs 里的 apk 配置（如果已经解压）
+          # 也处理 rootfs 里的配置
           find bin/targets/ -path "*/etc/apk/*" -type f 2>/dev/null | while read f; do
-            echo "  📄 处理: $f"
-            sed -i 's|downloads.immortalwrt.org|mirrors.ustc.edu.cn/immortalwrt|g' "$f"
-            sed -i 's|downloads.openwrt.org|mirrors.ustc.edu.cn/openwrt|g' "$f"
+            echo "  📄 清空: $f"
+            > "$f"
           done
           
-          echo "✅ 后期替换完成"
+          echo "✅ apk 源已清空"
+
 
       - name: Save build cache
         if: >-
