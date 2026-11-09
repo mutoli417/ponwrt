@@ -654,7 +654,92 @@ jobs:
           grep -rl "argon-config" feeds/luci --include="*.json" 2>/dev/null | while read -r f; do
             sed -i '/argon-config/d' "$f" 2>/dev/null || true
           done || true
-          
+          # 确保 sbin 脚本有执行权限
+          echo "🔧 确保 cpuusage/tempinfo 脚本有执行权限..."
+          [ -f files/sbin/cpuusage ] && chmod +x files/sbin/cpuusage
+          [ -f files/sbin/tempinfo ] && chmod +x files/sbin/tempinfo
+
+          # 应用 CPU 使用率补丁
+          echo "🔧 应用 CPU 使用率补丁..."
+          if [ -f scripts/patch-luci-cpuusage.sh ]; then
+            PONWRT_DIR=. bash scripts/patch-luci-cpuusage.sh || true
+          fi
+
+          # 刷机后默认时区：Asia/Shanghai
+          echo "🔧 设置默认时区 Asia/Shanghai..."
+          mkdir -p files/etc/uci-defaults
+          cat > files/etc/uci-defaults/99-timezone-cn <<'EOF'
+#!/bin/sh
+uci -q batch <<'UCI'
+set system.@system[0].zonename='Asia/Shanghai'
+set system.@system[0].timezone='CST-8'
+commit system
+UCI
+exit 0
+EOF
+          chmod +x files/etc/uci-defaults/99-timezone-cn
+
+          # WiFi 默认配置：2.4G/5G 国家码 CN、信道 auto、默认 SSID
+          echo "🔧 设置 WiFi 默认配置..."
+          cat > files/etc/uci-defaults/96-wifi-cn <<'EOF'
+#!/bin/sh
+log() { logger -t wifi-config "$@"; }
+
+# uci-defaults 可能在 wifi config 之前执行 —— 没生成就先生成
+if [ ! -f /etc/config/wireless ]; then
+	command -v wifi >/dev/null 2>&1 && wifi config >/dev/null 2>&1
+fi
+[ -f /etc/config/wireless ] || { log "未找到 /etc/config/wireless，跳过"; exit 0; }
+
+changed=0
+for dev in $(uci -q show wireless | sed -n 's/^wireless\.\([A-Za-z0-9_-]*\)=wifi-device$/\1/p'); do
+	band="$(uci -q get wireless.$dev.band 2>/dev/null)"
+	hwmode="$(uci -q get wireless.$dev.hwmode 2>/dev/null)"
+
+	is5g=0
+	[ "$band" = "5g" ] && is5g=1
+	[ -z "$band" ] && [ "$hwmode" = "11a" ] && is5g=1
+
+	if [ "$is5g" = "1" ]; then
+		uci -q set wireless.$dev.country="CN"
+		uci -q set wireless.$dev.country_ie='1'
+		uci -q set wireless.$dev.channel="auto"
+		log "$dev (5G): country=CN channel=auto"
+	else
+		uci -q set wireless.$dev.country="CN"
+		uci -q set wireless.$dev.country_ie='1'
+		uci -q set wireless.$dev.channel="auto"
+		log "$dev (2.4G): country=CN channel=auto"
+	fi
+	changed=1
+done
+
+# 默认无线名称
+for iface in $(uci -q show wireless | sed -n 's/^wireless\.\([A-Za-z0-9_-]*\)=wifi-iface$/\1/p'); do
+	dev="$(uci -q get wireless.$iface.device 2>/dev/null)"
+	band="$(uci -q get wireless.$dev.band 2>/dev/null)"
+	hwmode="$(uci -q get wireless.$dev.hwmode 2>/dev/null)"
+	is5g=0
+	[ "$band" = "5g" ] && is5g=1
+	[ -z "$band" ] && [ "$hwmode" = "11a" ] && is5g=1
+	if [ "$is5g" = "1" ]; then
+		uci -q set wireless.$iface.ssid="TP-LINK_6628_5G"
+	else
+		uci -q set wireless.$iface.ssid="TP-LINK_6628"
+	fi
+	changed=1
+done
+
+if [ "$changed" = "1" ]; then
+	uci -q commit wireless
+	command -v wifi >/dev/null 2>&1 && wifi reload >/dev/null 2>&1 || true
+	log "已提交 wireless 配置"
+fi
+exit 0
+EOF
+          chmod +x files/etc/uci-defaults/96-wifi-cn
+
+                  
           # 强制启用 IPTV 相关包
           echo "🔒 强制启用 IPTV 相关包..."
           for pkg in luci-app-iptv luci-i18n-iptv-zh-cn; do
