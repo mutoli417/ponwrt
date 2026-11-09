@@ -1,0 +1,10 @@
+#!/bin/sh
+# 默认时区：Asia/Shanghai (CST-8)
+
+uci -q batch <<'UCI'
+set system.@system[0].zonename='Asia/Shanghai'
+set system.@system[0].timezone='CST-8'
+commit system
+UCI
+
+exit 0
