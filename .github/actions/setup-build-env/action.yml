@@ -1,1 +1,145 @@
-0
+name: 'Setup OpenWrt build environment'
+description: >
+  释放磁盘、按需创建 swap、安装编译依赖、可选执行 init 脚本并设置时区。
+  通过 input 覆盖 Build PonWrt（minimal/deep/swap/init）与 Release PonWrt
+  （full/basic/no-swap）两条线的差异，避免维护两份 apt 列表。
+
+inputs:
+  deps-profile:
+    description: '依赖集: minimal = Build PonWrt 那套 / full = Release PonWrt 那套'
+    required: false
+    default: 'minimal'
+  extra-packages:
+    description: '额外安装的 apt 包（空格分隔，可选）'
+    required: false
+    default: ''
+  clean-level:
+    description: '磁盘清理深度: basic = 只删 3 个大件 / deep = 再删 CodeQL/boost/jvm/powershell/swift + docker prune + purge firefox snapd'
+    required: false
+    default: 'basic'
+  setup-swap:
+    description: '是否创建 swap'
+    required: false
+    default: 'false'
+  swap-size:
+    description: 'swap 大小（fallocate 参数）'
+    required: false
+    default: '8G'
+  init-script:
+    description: '是否执行 scripts/init_build_environment.sh（仓库内优先，否则回退官方脚本）'
+    required: false
+    default: 'false'
+  timezone:
+    description: '时区，留空则跳过'
+    required: false
+    default: ''
+  fail-on-apt-error:
+    description: 'apt install 失败时是否让步骤失败（true = Release 原行为；false = Build PonWrt 原行为，失败继续）'
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Free disk space
+      shell: bash
+      env:
+        CLEAN_LEVEL: ${{ inputs.clean-level }}
+      run: |
+        # 两个 workflow 都删这三个
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc 2>/dev/null || true
+
+        if [ "$CLEAN_LEVEL" = "deep" ]; then
+          sudo rm -rf /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/lib/jvm \
+            /usr/local/share/powershell /usr/share/swift 2>/dev/null || true
+          sudo docker image prune --all --force 2>/dev/null || true
+          sudo -E apt-get -yqq purge firefox snapd 2>/dev/null || true
+        fi
+
+    - name: Setup swap
+      if: ${{ inputs.setup-swap == 'true' }}
+      shell: bash
+      env:
+        SWAP_SIZE: ${{ inputs.swap-size }}
+      run: |
+        sudo swapoff -a 2>/dev/null || true
+        sudo rm -f /swapfile
+        sudo fallocate -l "$SWAP_SIZE" /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile && sudo swapon /swapfile
+
+    - name: Install apt dependencies
+      shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+        DEPS_PROFILE: ${{ inputs.deps-profile }}
+        EXTRA_PACKAGES: ${{ inputs.extra-packages }}
+        FAIL_ON_APT_ERROR: ${{ inputs.fail-on-apt-error }}
+      run: |
+        # update 失败直接退出（与原两个 workflow 一致）
+        sudo -E apt-get -yqq update
+
+        if [ "$DEPS_PROFILE" = "full" ]; then
+          PKGS=(
+            asciidoc autoconf automake autopoint binutils bison build-essential
+            bzip2 ccache clang cmake cpio curl device-tree-compiler flex gawk
+            gettext git g++-multilib gcc-multilib gperf help2man intltool
+            libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev
+            libmpfr-dev libncurses-dev libpython3-dev libreadline-dev libssl-dev
+            libtool libyaml-dev lld llvm ninja-build p7zip-full patch pkgconf
+            python3 python3-docutils python3-pip python3-ply python3-pyelftools
+            qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo
+            uglifyjs unzip wget xmlto xxd zlib1g-dev zstd
+          )
+          APT_OPTS=(--no-install-recommends)
+        else
+          PKGS=(
+            build-essential clang llvm dwarves libssl-dev libelf-dev bc flex bison
+            python3 xz-utils tar unzip zip zstd dos2unix ccache gettext
+            rsync file wget curl git subversion
+          )
+          APT_OPTS=()
+        fi
+
+        if [ -n "$EXTRA_PACKAGES" ]; then
+          read -ra EXTRA <<< "$EXTRA_PACKAGES"
+          PKGS+=("${EXTRA[@]}")
+        fi
+
+        # 临时关 -e 捕获 apt 退出码，按 fail-on-apt-error 决定是否失败
+        set +e
+        sudo -E apt-get -yqq install "${APT_OPTS[@]}" "${PKGS[@]}"
+        RC=$?
+        set -e
+
+        if [ "$RC" -eq 0 ]; then
+          echo "✅ apt install 成功"
+        elif [ "$FAIL_ON_APT_ERROR" = "true" ]; then
+          echo "::error::apt install 失败 (rc=$RC)"
+          exit 1
+        else
+          echo "::warning::apt install 失败 (rc=$RC)，继续 —— 缺依赖会在编译阶段暴露"
+        fi
+
+    - name: Init build environment script
+      if: ${{ inputs.init-script == 'true' }}
+      shell: bash
+      run: |
+        if [ -x "$GITHUB_WORKSPACE/scripts/init_build_environment.sh" ]; then
+          bash "$GITHUB_WORKSPACE/scripts/init_build_environment.sh" || true
+        else
+          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)' || true
+        fi
+
+    - name: Set timezone
+      if: ${{ inputs.timezone != '' }}
+      shell: bash
+      env:
+        TZ_INPUT: ${{ inputs.timezone }}
+      run: sudo -E timedatectl set-timezone "$TZ_INPUT"
+
+    - name: Cleanup apt
+      shell: bash
+      run: |
+        sudo -E apt-get -yqq autoremove --purge || true
+        sudo -E apt-get -yqq clean || true
