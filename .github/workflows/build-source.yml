@@ -11,10 +11,13 @@ env:
   CCACHE_MAXSIZE: 2G
   PREBUILT_HOST: ${{ github.event.inputs.prebuilt_host == 'false' && 'false' || 'true' }}
   HOST_MODE: ${{ github.event.inputs.prebuilt_host == 'false' && 'source' || 'prebuilt' }}
-  RUST_PIN_FEED: false
   CACHE_RELEASE: cache-backup
   TZ: Asia/Shanghai
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # CACHE_ROOT 提升为 workflow 级静态变量：
+  #   actions/cache 的 with.path 使用表达式上下文，GITHUB_ENV 动态写入的值
+  #   在 ${{ env.* }} 中不可见，原写法会让缓存路径退化为 /.ccache 等。
+  CACHE_ROOT: ${{ github.workspace }}
   SOC: ${{ github.event.inputs.soc || 'an7581' }}
   PROFILE: ${{ github.event.inputs.profile || 'fiberhome_hg5585f-ct' }}
   BUILD_SCOPE: ${{ github.event.inputs.scope || 'firmware' }}
@@ -161,8 +164,6 @@ jobs:
       - name: Extract custom packages (status plugins)
         run: |
           cd "$GITHUB_WORKSPACE"
-          # 动态设置 CACHE_ROOT 环境变量（env 里的 $GITHUB_WORKSPACE 不会被展开）
-          echo "CACHE_ROOT=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
           if [ -f custom-packages.zip ]; then
             echo "📦 解压自定义插件包..."
             unzip -o custom-packages.zip
@@ -226,56 +227,31 @@ jobs:
           echo "========================================"
 
       # =========================================================
-      # 1. 释放空间 + 初始化编译环境
+      # 1. 释放空间 + 初始化编译环境（composite action）
+      #   与 Release PonWrt 共用 .github/actions/setup-build-env，
+      #   apt 列表只有一份，两条线差异通过 input 表达：
+      #     clean-level        basic / deep
+      #     setup-swap         true / false
+      #     init-script        true / false
+      #     timezone           "" / "Asia/Shanghai"
+      #     fail-on-apt-error  true / false
       # =========================================================
-      - name: Free disk space & init build environment
-        env:
-          DEBIAN_FRONTEND: noninteractive
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
+        with:
+          deps-profile: minimal          # Build PonWrt 原来那套依赖
+          clean-level: deep              # 原来删 CodeQL/boost/jvm + docker prune + purge snap
+          setup-swap: 'true'
+          swap-size: '8G'
+          init-script: 'true'
+          timezone: ${{ env.TZ }}
+          fail-on-apt-error: 'false'     # 原来 `|| true`，失败继续
+
+      - name: Show disk & memory
         run: |
-          # --- 删除预装大件 ---
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/lib/jvm \
-            /usr/local/share/powershell /usr/share/swift 2>/dev/null || true
-          sudo docker image prune --all --force 2>/dev/null || true
-          sudo -E apt-get -yqq purge firefox snapd 2>/dev/null || true
-
-          # --- 配置 8G Swap (aarch64 工具链/内核编译需要) ---
-          sudo swapoff -a 2>/dev/null || true
-          sudo rm -f /swapfile
-          sudo fallocate -l 8G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile && sudo swapon /swapfile
-
-          # --- 安装编译依赖 ---
-          sudo -E apt-get -yqq update
-          sudo -E apt-get -yqq install build-essential clang llvm dwarves \
-            libssl-dev libelf-dev bc flex bison python3 \
-            xz-utils tar unzip zip zstd dos2unix ccache gettext \
-            rsync file wget curl git subversion 2>/dev/null || true
-
-          # 初始化编译环境：建议将该脚本入仓并按 commit sha 校验，
-          # 避免 `curl | bash` 的供应链风险。
-          if [ -x "$GITHUB_WORKSPACE/scripts/init_build_environment.sh" ]; then
-            bash "$GITHUB_WORKSPACE/scripts/init_build_environment.sh" || true
-          else
-            sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)' || true
-          fi
-
-          sudo -E apt-get -yqq autoremove --purge
-          sudo -E apt-get -yqq clean
-          sudo -E timedatectl set-timezone "$TZ"
-
-          # --- 编译根目录（固定 /workdir，与 workflow 级 env 保持一致）---
-          # 注意：BUILD_ROOT 必须是 workflow 级静态变量，不能用 GITHUB_ENV 动态写入，
-          # 否则 actions/cache 的 with.path 里 ${{ env.BUILD_ROOT }} 会解析成空串，
-          # dl 缓存命中不到 /openwrt/dl，导致工具链编译时源码包缺失。
-          sudo mkdir -p /workdir
-          sudo chown "$USER":"$USER" /workdir
-
           echo "磁盘空间:"; df -hT
           echo "内存/Swap:"; free -h
 
-      # =========================================================
       # =========================================================
       # 2.1 构建缓存：算 key（移植自 OpenWRT-CI）
       #
@@ -296,7 +272,11 @@ jobs:
           # 得到 ponwrt-dl-pbs05/ponwrt-master-202643，和工具链 key
           # （ponwrt-pbs05-ponwrt-...，经 pwrt-cache.sh 的 slug() 处理）风格不一致，
           # 将来按前缀批量清理时容易漏。这里用同一条规则预先 slug 一次。
-          echo "SOURCE_SLUG=$(printf '%s' "${SOURCE:-unknown}" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_ENV"
+          # SOURCE 在 shell 中未定义时回退到 GITHUB_REPOSITORY，
+          # 避免恒为 "unknown" 导致缓存 key 与注释不符。
+          SOURCE_SLUG="${SOURCE:-$GITHUB_REPOSITORY}"
+          SOURCE_SLUG=$(printf '%s' "$SOURCE_SLUG" | tr -c 'A-Za-z0-9._-' '-')
+          echo "SOURCE_SLUG=$SOURCE_SLUG" >> "$GITHUB_ENV"
 
       # =========================================================
       # 2.2 构建缓存：恢复
@@ -417,7 +397,8 @@ jobs:
         uses: actions/cache/restore@v5
         continue-on-error: true
         with:
-          path: /workdir/dl
+          # dl 实际位于 $CACHE_ROOT/dl，原 /workdir/dl 与编译根不一致
+          path: ${{ env.CACHE_ROOT }}/dl
           # 按分支 + 周号：同一周内复用同一条目。
           # 原先用 github.run_number → 每次运行都 save 一份新副本，
           # 10GB 配额会被迅速刷满并淘汰掉有用的旧缓存。
@@ -467,7 +448,6 @@ jobs:
       - name: Load custom configuration
         run: |
           cd "$GITHUB_WORKSPACE"
-          
 
           # git 可能在 checkout 时丢掉 exec bit，rpcd 就执行不了 tempinfo
           [ -d files/sbin ] && chmod +x files/sbin/* 2>/dev/null
@@ -666,7 +646,7 @@ jobs:
             sed -i "/$pkg/d" .config 2>/dev/null || true
             echo "CONFIG_PACKAGE_$pkg=y" >> .config
           done
-          
+
           # 搜索包含版本信息的文件
           echo "🔍 搜索包含版本信息的文件..."
           grep -rl "LuCI Master" feeds/luci --include="*.js" --include="*.htm" 2>/dev/null | head -20
@@ -1135,7 +1115,8 @@ jobs:
         continue-on-error: true
         with:
           key: ponwrt-dl-${{ env.SOURCE_SLUG }}-${{ github.event.inputs.branch || 'master' }}-${{ steps.resolve.outputs.week }}
-          path: /workdir/dl
+          # 与 Restore 保持一致，使用 CACHE_ROOT
+          path: ${{ env.CACHE_ROOT }}/dl
 
       # =========================================================
       # 18. 编译固件
@@ -1416,5 +1397,3 @@ jobs:
           S="$GITHUB_WORKSPACE/scripts/pwrt-cache.sh"
           dos2unix "$S" 2>/dev/null || true
           bash "$S" rollover
-
-
