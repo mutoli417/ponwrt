@@ -460,6 +460,7 @@ jobs:
             sed -i "/'data-mode': 'updates'/d" "$f"
             sed -i "s/let currentDisplayMode = 'available'/let currentDisplayMode = 'installed'/" "$f"
             sed -i "/'data-mode': 'installed'/s/cbi-tab-disabled/cbi-tab/" "$f"
+            sed -i "/_('OK')/d" "$f"
           done
           
           echo "✅ 按钮已删除"
