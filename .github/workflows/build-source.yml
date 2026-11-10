@@ -1,4 +1,5 @@
-name: Build PonWrt (Source Repo)
+name: Build PonWrt
+run-name: Build PonWrt #${{ github.run_attempt }}
 
 env:
   FW_AUTHOR: ${{ github.event.inputs.fw_author || 'qwe' }}
