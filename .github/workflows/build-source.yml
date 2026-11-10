@@ -455,9 +455,8 @@ jobs:
             sed -i "/Update lists…/d" "$f"
             sed -i "/Download and install package/d" "$f"
             sed -i "/Package name or URL…/d" "$f"
-            sed -i "/Upload Package…/d" "$f"
-
           done
+
           
           echo "✅ 按钮已删除"
      
