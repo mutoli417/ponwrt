@@ -115,6 +115,13 @@ jobs:
           tar --zstd -cf "release/ponwrt-${{ matrix.target }}.tar.zst" \
             -C bin/targets/airoha "${{ matrix.target }}"
 
+      - name: Remove signing key material
+        if: always()
+        run: |
+          # 构建结束后立即清理工作区残留的私钥/公钥材料，避免随工作区或缓存外泄
+          rm -f private-key.pem public-key.pem
+          echo "已清理工作区签名密钥材料"
+
       - name: Upload ${{ matrix.target }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
