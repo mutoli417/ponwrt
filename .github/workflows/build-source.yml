@@ -2,7 +2,7 @@ name: Build PonWrt
 run-name: Build PonWrt #${{ github.run_attempt }}
 
 env:
-  FW_AUTHOR: ${{ github.event.inputs.fw_author || 'qwe' }}
+  FW_AUTHOR: ${{ github.event.inputs.fw_author || 'ponwrt' }}
   FEEDS_CONF: ''
   UPLOAD_BIN_DIR: false
   UPLOAD_FIRMWARE: true
