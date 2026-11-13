@@ -26,7 +26,7 @@ inputs:
     required: false
     default: '8G'
   init-script:
-    description: '是否执行 scripts/init_build_environment.sh（仓库内优先，否则回退官方脚本）'
+    description: '是否执行仓库内置 scripts/init_build_environment.sh（不再回退远端 curl 脚本）'
     required: false
     default: 'false'
   timezone:
@@ -125,10 +125,13 @@ runs:
       if: ${{ inputs.init-script == 'true' }}
       shell: bash
       run: |
-        if [ -x "$GITHUB_WORKSPACE/scripts/init_build_environment.sh" ]; then
-          bash "$GITHUB_WORKSPACE/scripts/init_build_environment.sh" || true
+        INIT_SCRIPT="$GITHUB_WORKSPACE/scripts/init_build_environment.sh"
+        if [ -f "$INIT_SCRIPT" ]; then
+          # 脚本内部要求 root（apt / 写 /etc），与原远端分支一致走 sudo；
+          # 保持 Build 线原有的软失败语义：初始化异常不挂构建。
+          sudo bash "$INIT_SCRIPT" || true
         else
-          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)' || true
+          echo "::warning::仓库内置 scripts/init_build_environment.sh 缺失，跳过初始化环境脚本（不再回退远端 curl 执行）"
         fi
 
     - name: Set timezone
