@@ -1,11 +1,17 @@
-src-git packages https://github.com/immortalwrt/packages.git
-src-git luci https://github.com/immortalwrt/luci.git
-src-git routing https://github.com/openwrt/routing.git
-src-git telephony https://github.com/openwrt/telephony.git
-src-git video https://github.com/openwrt/video.git
-src-git pon_drivers https://github.com/pbs05/openwrt-pon-drivers.git
-src-git pon_userspace https://github.com/pbs05/openwrt-pon-userspace.git
-src-git helloworld https://github.com/fw876/helloworld.git
+# feeds 源已按 commit SHA 锁定（快照日期 2026-11-13），保证构建可复现。
+# 语法：src-git <name> <url>^<commit-sha>（scripts/feeds 按 ^ 切分提交）。
+# 各 feed 默认分支：packages/luci/routing/telephony/video=master；
+# pon_drivers/pon_userspace=main；helloworld=dev。
+# 升级：先评审上游变更，再把对应 ^<sha> 替换为新提交；若改为跟踪分支，
+# 用 <url>;branch=<name> 替代 ^<sha>。
+src-git packages https://github.com/immortalwrt/packages.git^decf94639ffd6ddd26591c190b547c6b7eea150b
+src-git luci https://github.com/immortalwrt/luci.git^ad75cde88e694b511100576bfbe0a280e5efe6ef
+src-git routing https://github.com/openwrt/routing.git^ea8633da9c461a9bdc62a0323439d31180762e03
+src-git telephony https://github.com/openwrt/telephony.git^9bcb6d71db03377ff49ccb099be763add9a5b059
+src-git video https://github.com/openwrt/video.git^97137d9e4bbf2d5b8fc74b49d2a8641f21855032
+src-git pon_drivers https://github.com/pbs05/openwrt-pon-drivers.git^2789b970a6bfcc5ee56cee699622201b8061b67c
+src-git pon_userspace https://github.com/pbs05/openwrt-pon-userspace.git^cce9d756742487b378749c606b30e13ee9b0f093
+src-git helloworld https://github.com/fw876/helloworld.git^6fbc9f563c9e7cd3b65061fba13ffc62666066aa
 #src-git targets https://github.com/openwrt/targets.git
 #src-git oldpackages http://git.openwrt.org/packages.git
 #src-link custom /usr/src/openwrt/custom-feed
