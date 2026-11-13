@@ -30,7 +30,10 @@ env:
   OPT_CRYPTO_EIP93:   ${{ github.event.inputs.opt_eip93   == '1' && '1' || '0' }}
 
 on:
-  repository_dispatch:
+  # 仅保留手动触发：workflow_dispatch 的 inputs 不被 repository_dispatch 事件携带，
+  # 且 dispatch 可被任何持有 repo 范围 token 的应用触发；本仓库内也无 dispatch 调用方。
+  # 如后续确需 dispatch，应在 job 首步校验 github.event.client_payload.source 白名单，
+  # 并保持各 job 最小权限，不要回退到 workflow 级 contents: write。
   workflow_dispatch:
     inputs:
       soc:
@@ -139,13 +142,16 @@ on:
           - 'false'
           - 'true'
 
-# 最小权限：发布阶段需要 contents: write；清理阶段需要 actions: read/write
+# 默认只读；写权限按 job 按需提权（见 build / cache-rollover 各自 permissions）
 permissions:
-  contents: write
-  actions: write
+  contents: read
+  actions: read
 
 jobs:
   build:
+    permissions:
+      contents: write   # gh-release 创建/更新 Release、删除旧 Release
+      actions: write    # 缓存存读、删除旧 workflow 运行记录
     runs-on: ubuntu-24.04
     # 350 分钟接近 GitHub-hosted 6 小时上限；首次冷构建（工具链+全量 kmod）
     # 在 4 核 16G runner 上可能超时，建议拆出 toolchain-only 预热 job。
@@ -1367,6 +1373,9 @@ jobs:
   # =========================================================
   cache-rollover:
     name: Roll build cache
+    permissions:
+      contents: read
+      actions: write   # 仅删除旧代缓存
     needs: build
     # 只在构建成功、且确实存过缓存时才轮换
     if: ${{ needs.build.result == 'success' && needs.build.outputs.cache_key != '' }}
