@@ -127,7 +127,7 @@ if [ "${RUST_PIN_FEED:-0}" = "1" ]; then
     rustup target add --toolchain "$FEED_VER" "$RUST_TARGET" >>"$REPORT" 2>&1 || true
     PIN_ROOT=$(rustup run "$FEED_VER" rustc --print sysroot 2>/dev/null || true)
     if [ -n "$PIN_ROOT" ] && [ -d "$PIN_ROOT/lib/rustlib/$RUST_TARGET/lib" ] \
-       && [ -x "$PIN_ROOT/bin/rustc" ]; then
+       && [ -x "$PIN_ROOT/bin/cargo" ] && [ -x "$PIN_ROOT/bin/rustc" ] && [ -x "$PIN_ROOT/bin/rustdoc" ]; then
       RUST_TOOLCHAIN=$FEED_VER
       RUST_ROOT=$PIN_ROOT
       PIN_OK=1
