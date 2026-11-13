@@ -179,6 +179,14 @@ jobs:
           else
             echo "⚠️  custom-packages.zip 不存在，跳过"
           fi
+      
+      - name: Fetch status plugins (external LuCI apps)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/fetch-status-plugins.sh"
+          [ -f "$S" ] || { echo "::error::缺 $S"; exit 1; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
 
       - name: Resolve device profile
         id: resolve
