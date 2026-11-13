@@ -179,10 +179,36 @@ fi
 #    必须在 OpenWrt 展开 HostBuild 规则【之前】插入，
 #    所以 sed 插到 $(eval $(call HostBuild)) 之前。
 # ---------------------------------------------------------------
+PREBUILT_MK="$SCRIPT_DIR/rust-prebuilt.mk"
+CI_PREBUILT="$RUST_FEED/ci-prebuilt.mk"
+if [ ! -f "$PREBUILT_MK" ]; then
+  rm -f "$CI_PREBUILT"
+  warn "Rust: 缺 scripts/rust-prebuilt.mk，退回源码自举"
+  exit 1
+fi
+if [ ! -r "$PREBUILT_MK" ]; then
+  rm -f "$CI_PREBUILT"
+  warn "Rust: scripts/rust-prebuilt.mk 不可读，退回源码自举"
+  exit 1
+fi
+
 {
   printf 'CI_RUST_ROOT:=%s\n' "$RUST_ROOT"
-  cat "$SCRIPT_DIR/rust-prebuilt.mk"
-} > "$RUST_FEED/ci-prebuilt.mk"
+  cat "$PREBUILT_MK"
+} > "$CI_PREBUILT" || {
+  rm -f "$CI_PREBUILT"
+  warn "Rust: 写 ci-prebuilt.mk 失败，退回源码自举"
+  exit 1
+}
+
+# 完整性复核：片段必须带 Host/Install 规则。若只剩 CI_RUST_ROOT 一行，
+# HostBuild 的 Prepare/Configure/Compile/Install 全空，会退化成空规则
+# 而不是源码自举；这里显式拦下并回退。
+if ! grep -q '^define Host/Install' "$CI_PREBUILT"; then
+  rm -f "$CI_PREBUILT"
+  warn "Rust: ci-prebuilt.mk 规则不完整（缺 Host/Install），退回源码自举"
+  exit 1
+fi
 
 RUST_MAKEFILE="$RUST_FEED/Makefile"
 # perl 需要从环境里拿这两个字面量（避免 shell 转义把 $ 吃掉）
