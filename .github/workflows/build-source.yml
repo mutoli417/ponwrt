@@ -158,7 +158,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
@@ -289,7 +289,7 @@ jobs:
       - name: Restore build cache
         id: cache-restore
         if: env.IGNORE_CACHE != 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           key: ${{ steps.cache-key.outputs.key }}
           restore-keys: ${{ steps.cache-key.outputs.prefix }}-
@@ -395,7 +395,7 @@ jobs:
       - name: Restore dl cache
         id: dl-restore
         if: env.USE_DL_CACHE == 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         continue-on-error: true
         with:
           # dl 实际位于 $CACHE_ROOT/dl，原 /workdir/dl 与编译根不一致
@@ -930,7 +930,7 @@ jobs:
           (!cancelled())
           && steps.toolchain.outcome == 'success'
           && steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         continue-on-error: true
         with:
           # -early 后缀：见上面的说明，不能和正式 key 相同，
@@ -1026,7 +1026,7 @@ jobs:
       # 16. SSH 调试（仅受控场景开启）
       # =========================================================
       - name: SSH connection to Actions
-        uses: mxschmitt/action-tmate@v3
+        uses: mxschmitt/action-tmate@35b54afac29c97fb54faba5b513f8fbd1882f113 # v3
         # 调试入口默认关闭；仅当手动选择 ssh=true 且触发者为仓库所有者时才打开。
         # 保留 owner 校验：调试入口只对仓库所有者开放。
         if: >-
@@ -1081,7 +1081,7 @@ jobs:
           && env.USE_DL_CACHE == 'true'
           && steps.dl-restore.outputs.cache-hit != 'true'
           && steps.package.outcome == 'success'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         continue-on-error: true
         with:
           key: ponwrt-dl-${{ env.SOURCE_SLUG }}-${{ github.event.inputs.branch || 'master' }}-${{ steps.resolve.outputs.week }}
@@ -1166,7 +1166,7 @@ jobs:
           success()
           && steps.cache-restore.outputs.cache-hit != 'true'
           && (steps.compile.outcome == 'success' || steps.toolchain.outcome == 'success')
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         continue-on-error: true
         with:
           key: ${{ steps.cache-key.outputs.key }}
@@ -1243,7 +1243,7 @@ jobs:
       # 20. 上传 bin 目录
       # =========================================================
       - name: Upload bin directory
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
           name: OpenWrt_bin_${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
@@ -1262,7 +1262,7 @@ jobs:
           echo "status=success" >> "$GITHUB_OUTPUT"
 
       - name: Upload firmware directory
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         if: steps.organize.outputs.status == 'success'
         with:
           name: OpenWrt_firmware_${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
@@ -1315,7 +1315,7 @@ jobs:
           echo "status=success" >> "$GITHUB_OUTPUT"
 
       - name: Upload firmware to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         if: steps.tag.outputs.status == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1343,14 +1343,14 @@ jobs:
       # =========================================================
       - name: Delete workflow runs
         if: steps.compile.outputs.status == 'success'
-        uses: Mattraks/delete-workflow-runs@v2
+        uses: Mattraks/delete-workflow-runs@0cf693bc9909e5e867ee8f27b813224ba862939c # v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           retain_days: 7
           keep_minimum_runs: 10
 
       - name: Remove old releases
-        uses: dev-drprasad/delete-older-releases@v0.3.4
+        uses: dev-drprasad/delete-older-releases@dfbe6be2a006e9475dfcbe5b8d201f1824c2a9fe # v0.3.4
         if: env.UPLOAD_RELEASE == 'true' && !cancelled()
         with:
           keep_latest: 10
@@ -1380,7 +1380,7 @@ jobs:
       KEY: ${{ needs.build.outputs.cache_key }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
 
