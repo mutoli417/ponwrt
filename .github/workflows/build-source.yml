@@ -186,6 +186,14 @@ jobs:
             echo "⚠️  custom-packages.zip 不存在，跳过"
           fi
 
+      - name: Fetch status plugins (external LuCI apps)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/fetch-status-plugins.sh"
+          [ -f "$S" ] || { echo "::error::缺 $S"; exit 1; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
+
       - name: Resolve device profile
         id: resolve
         run: |
@@ -437,7 +445,7 @@ jobs:
       #   缓存里没有 → `--frozen` 不给补救机会，编到 rust 包必挂：
       #     failed to download `core_detect v1.0.0`
       #   只摘「禁止联网」，--locked 保留（版本仍锁死，结果可复现）。
-      #   必须在 diy-part1 之后（可选插件是那一步拉取的）。
+      #   必须在 Fetch status plugins 步骤之后（可选插件是那一步拉取的）。
       # =========================================================
       - name: Relax cargo offline flags
         continue-on-error: true
@@ -726,7 +734,7 @@ jobs:
             fi
           done
           if [ -n "$OPT_MISS" ]; then
-            echo "::error::状态插件缺失:$OPT_MISS 请检查 diy-part1.sh 的 clone / 拷贝是否成功"
+            echo "::error::状态插件缺失:$OPT_MISS 请检查 scripts/fetch-status-plugins.sh 的 clone / 拷贝是否成功"
             exit 1
           fi
           echo "✅ 状态插件校验通过"
