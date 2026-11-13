@@ -615,6 +615,14 @@ jobs:
           echo "---"
           grep -rl "luciversion" feeds/luci --include="*.js" 2>/dev/null | head -20
 
+      - name: Apply ARM64CE kernel crypto config
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/patch-crypto-arm64ce.sh"
+          [ -f "$S" ] || { echo "::warning::缺 $S，跳过 ARM64CE 内核符号注入"; exit 0; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
+
       # =========================================================
       # 9. defconfig + 校验机型
       #    【唯一一次 defconfig】后续不再调用，避免 .config 被重新展开、
@@ -758,7 +766,7 @@ jobs:
             if grep -q '^CONFIG_CRYPTO_AES_ARM64=y' "$KCFG"; then
               echo "  ✅ 内核符号已写入 ${KCFG}"
             else
-              echo "::warning::${KCFG} 里没有 CONFIG_CRYPTO_AES_ARM64 —— diy-part2-crypto.sh 未生效（没被 source？路径不对？）"
+              echo "::warning::${KCFG} 里没有 CONFIG_CRYPTO_AES_ARM64 —— patch-crypto-arm64ce.sh 未生效（脚本缺失？SOC 未识别？路径不对？）"
             fi
           fi
 
