@@ -183,13 +183,14 @@ PREBUILT_MK="$SCRIPT_DIR/rust-prebuilt.mk"
 CI_PREBUILT="$RUST_FEED/ci-prebuilt.mk"
 if [ ! -f "$PREBUILT_MK" ]; then
   rm -f "$CI_PREBUILT"
+  # A-M1: 缺片段时降级源码自举（不注入 ci-prebuilt.mk），以 warning 结束而非中断 prepare-rust。
   warn "Rust: 缺 scripts/rust-prebuilt.mk，退回源码自举"
-  exit 1
+  exit 0
 fi
 if [ ! -r "$PREBUILT_MK" ]; then
   rm -f "$CI_PREBUILT"
   warn "Rust: scripts/rust-prebuilt.mk 不可读，退回源码自举"
-  exit 1
+  exit 0
 fi
 
 {
@@ -198,7 +199,7 @@ fi
 } > "$CI_PREBUILT" || {
   rm -f "$CI_PREBUILT"
   warn "Rust: 写 ci-prebuilt.mk 失败，退回源码自举"
-  exit 1
+  exit 0
 }
 
 # 完整性复核：片段必须带 Host/Install 规则。若只剩 CI_RUST_ROOT 一行，
@@ -207,7 +208,7 @@ fi
 if ! grep -q '^define Host/Install' "$CI_PREBUILT"; then
   rm -f "$CI_PREBUILT"
   warn "Rust: ci-prebuilt.mk 规则不完整（缺 Host/Install），退回源码自举"
-  exit 1
+  exit 0
 fi
 
 RUST_MAKEFILE="$RUST_FEED/Makefile"
@@ -220,7 +221,6 @@ export CI_HOSTBUILD='$(eval $(call HostBuild))'
 #   -i 原地模式下 i\ 命令会静默失效 —— 实测插入不进去且不报错。
 #   perl 的 \Q...\E 把整串当字面量，可靠得多。
 MARKER='include ./ci-prebuilt.mk'
-HOSTBUILD='$(eval $(call HostBuild))'
 
 perl -i -pe '
   BEGIN { $m = quotemeta($ENV{"CI_MARKER"}); $h = quotemeta($ENV{"CI_HOSTBUILD"}); }
@@ -232,10 +232,9 @@ if ! grep -Fxq "$MARKER" "$RUST_MAKEFILE"; then
   warn "Rust: 注入 ci-prebuilt.mk 失败，退回源码自举"
   exit 0
 fi
-# ⚠ 别把 $HOSTBUILD 直接放进带 $(...) 的字符串：
-#   它的内容是字面量 $(eval $(call HostBuild))，
-#   双引号里的 $(...) 会被 shell 当命令替换执行，
-#   直接报 "意外令牌附近语法错误 '('"（第147行就是这么炸的）。
+# ⚠ HostBuild 字面量 $(eval $(call HostBuild)) 必须经环境变量传给 perl，
+#   不能直接放进带 $(...) 的 shell 字符串：双引号里的 $(...) 会被 shell
+#   当命令替换执行，报 "意外令牌附近语法错误 '('"。
 log "注入: $MARKER（在 HostBuild 求值之前）"
 
 "$RUST_ROOT/bin/rustc" --version | tee -a "$REPORT"
