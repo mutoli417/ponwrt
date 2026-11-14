@@ -1,0 +1,55 @@
+diff --git a/watchdog.c b/watchdog.c
+--- a/watchdog.c
++++ b/watchdog.c
+@@ -17,6 +17,7 @@
+ #include <sys/ioctl.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
++#include <stdlib.h>
+ #include <fcntl.h>
+ 
+ #include <unistd.h>
+@@ -87,10 +88,43 @@
+ 	wdt_fd = -1;
+ }
+ 
++static int watchdog_read_sysfs_int(const char *attr)
++{
++	char path[64], buf[16];
++	int fd, len, val = -1;
++
++	snprintf(path, sizeof(path), "/sys/class/watchdog/watchdog0/%s", attr);
++	fd = open(path, O_RDONLY);
++	if (fd < 0)
++		return -1;
++
++	len = read(fd, buf, sizeof(buf) - 1);
++	close(fd);
++	if (len <= 0)
++		return -1;
++
++	buf[len] = '\0';
++	return atoi(buf);
++}
++
+ static int watchdog_set_drv_timeout(void)
+ {
++	int max_to = watchdog_read_sysfs_int("max_timeout");
++	int min_to = watchdog_read_sysfs_int("min_timeout");
++
+ 	if (wdt_fd < 0)
+ 		return -1;
++
++	/* Clamp to the driver-supported range; leave a 2s headroom on the
++	 * upper bound so scheduling/ping jitter cannot trigger a spurious
++	 * reset. If sysfs cannot be read, keep the original value. */
++	if (max_to > 0) {
++		int cap = max_to > 2 ? max_to - 2 : max_to;
++		if (wdt_drv_timeout > cap)
++			wdt_drv_timeout = cap;
++	}
++	if (min_to >= 0 && wdt_drv_timeout < min_to)
++		wdt_drv_timeout = min_to;
+ 
+ 	if (!ioctl(wdt_fd, WDIOC_SETTIMEOUT, &wdt_drv_timeout))
+ 		return 0;
