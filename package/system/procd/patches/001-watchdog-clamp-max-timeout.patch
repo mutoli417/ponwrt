@@ -16,7 +16,7 @@ diff --git a/watchdog.c b/watchdog.c
 +static int watchdog_read_sysfs_int(const char *attr)
 +{
 +	char path[64], buf[16];
-+	int fd, len, val = -1;
++	int fd, len;
 +
 +	snprintf(path, sizeof(path), "/sys/class/watchdog/watchdog0/%s", attr);
 +	fd = open(path, O_RDONLY);
