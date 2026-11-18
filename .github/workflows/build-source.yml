@@ -460,6 +460,15 @@ jobs:
           rm -rf package/feeds/video/qt6quick package/feeds/video/qt6svg 2>/dev/null || true
 
       # =========================================================
+      # 4.1 套用本地 PON 驱动 / 用户态补丁（激光恢复 / LOID 预览 / IPTV MAC 固化）
+      # 必须在 feeds install -a 之后（feed 目录此时才建立）。
+      # =========================================================
+      - name: Apply local PON patches
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          bash ./scripts/apply-pon-patches.sh
+
+      # =========================================================
       # 5.5 放宽 rust 包的「禁止联网」（--frozen / --offline）
       #   dl/cargo 是从缓存继承的（只增不减），上游在 Cargo.lock 加新依赖时
       #   缓存里没有 → `--frozen` 不给补救机会，编到 rust 包必挂：

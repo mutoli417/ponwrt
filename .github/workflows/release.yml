@@ -70,6 +70,10 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: Apply local PON patches
+        run: |
+          bash ./scripts/apply-pon-patches.sh
+
       - name: Load repository signing key
         env:
           PONWRT_APK_PRIVATE_KEY: ${{ secrets.PONWRT_APK_PRIVATE_KEY }}

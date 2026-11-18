@@ -1,0 +1,73 @@
+diff --git a/luci-app-iptv/root/usr/libexec/iptv-apply b/luci-app-iptv/root/usr/libexec/iptv-apply
+index 59c53f2..de20c95 100755
+--- a/luci-app-iptv/root/usr/libexec/iptv-apply
++++ b/luci-app-iptv/root/usr/libexec/iptv-apply
+@@ -262,8 +262,22 @@ write_network_config() {
+ 		uci set network.luci_iptv_bridge.igmp_snooping='0'
+ 		uci add_list network.luci_iptv_bridge.ports="$LAN_PORT"
+ 		uci add_list network.luci_iptv_bridge.ports='ct-iptv-svc'
+-		[ -n "$MULTICAST_VLAN" ] && uci add_list network.luci_iptv_bridge.ports='ct-iptv-mc'
+-		[ "$IGMP_PORT" = 'ct-iptv-igmp' ] && uci add_list network.luci_iptv_bridge.ports='ct-iptv-igmp'
++		if [ -n "$MULTICAST_VLAN" ]; then
++			uci add_list network.luci_iptv_bridge.ports='ct-iptv-mc'
++			uci -q delete network.luci_iptv_mc_port
++			uci set network.luci_iptv_mc_port='bridge-port'
++			uci set network.luci_iptv_mc_port.device='ct-iptv-mc'
++			uci set network.luci_iptv_mc_port.learning='0'
++			uci set network.luci_iptv_mc_port.isolate='1'
++		fi
++		if [ "$IGMP_PORT" = 'ct-iptv-igmp' ]; then
++			uci add_list network.luci_iptv_bridge.ports='ct-iptv-igmp'
++			uci -q delete network.luci_iptv_igmp_port
++			uci set network.luci_iptv_igmp_port='bridge-port'
++			uci set network.luci_iptv_igmp_port.device='ct-iptv-igmp'
++			uci set network.luci_iptv_igmp_port.learning='0'
++			uci set network.luci_iptv_igmp_port.isolate='1'
++		fi
+ 
+ 		uci set network.luci_iptv='interface'
+ 		uci set network.luci_iptv.proto='none'
+@@ -284,8 +298,34 @@ write_firewall_config() {
+ 	uci commit firewall || fail "Cannot save firewall configuration"
+ }
+ 
++apply_bridge_mac_fix() {
++	[ "$ENABLED" -eq 1 ] || return 0
++	[ -n "$MULTICAST_VLAN" ] || return 0
++
++	# 1. 组播与 IGMP 下行口禁用 MAC 学习，彻底杜绝上游 BNG 相同 MAC 表翻转引起机顶盒单播黑洞 (Error 1302)
++	if [ -e "/sys/class/net/ct-iptv-mc" ]; then
++		bridge link set dev ct-iptv-mc learning off 2>/dev/null || true
++		echo 0 > /sys/class/net/br-iptv/brif/ct-iptv-mc/learning 2>/dev/null || true
++	fi
++	if [ -e "/sys/class/net/ct-iptv-igmp" ]; then
++		bridge link set dev ct-iptv-igmp learning off 2>/dev/null || true
++		echo 0 > /sys/class/net/br-iptv/brif/ct-iptv-igmp/learning 2>/dev/null || true
++	fi
++
++	# 2. 动态探测业务口 ct-iptv-svc 上的网关 MAC 并静态固定到业务口
++	local bng_mac=""
++	bng_mac="$(bridge fdb show dev ct-iptv-svc 2>/dev/null | awk '/master br-iptv/ && !/permanent/ && !/self/ {print $1; exit}')"
++	[ -z "$bng_mac" ] && bng_mac="$(ip neigh show dev ct-iptv-svc 2>/dev/null | awk '/lladdr/ {print $5; exit}')"
++	if [ -n "$bng_mac" ]; then
++		bridge fdb replace "$bng_mac" dev ct-iptv-svc master static 2>/dev/null || true
++	fi
++}
++
+ reload_runtime() {
+-	[ "$ACTION" = "boot" ] && return 0
++	if [ "$ACTION" = "boot" ]; then
++		apply_bridge_mac_fix
++		return 0
++	fi
+ 
+ 	if [ "$ENABLED" -eq 1 ]; then
+ 		# The bridge must be filtered from its first forwarded frame.
+@@ -314,6 +354,7 @@ write_nft_rules
+ write_network_config
+ write_firewall_config
+ reload_runtime
++apply_bridge_mac_fix
+ 
+ logger -t iptv "IPTV bridge configuration applied"
+ exit 0
