@@ -53,7 +53,11 @@ fiberhome,an4475-g2)
 	#    hub），触发器根本没生效，等于把灯交给 ledpaneld 之外再加一层空绑定
 	;;
 fiberhome,hg5585f-ct)
-	# No GE port or USB3.0 LED on this panel.
+	ucidef_set_led_netdev "lan1" "lan1" "blue:lan-1" "lan1" "link tx rx"
+	ucidef_set_led_netdev "lan2" "lan2" "blue:lan-2" "lan2" "link tx rx"
+	ucidef_set_led_netdev "lan3" "lan3" "blue:lan-3" "lan3" "link tx rx"
+	ucidef_set_led_netdev "lan4" "lan4" "blue:lan-4" "lan4" "link tx rx"
+	# Telecom (CT) standard panel features one USB 2.0 port.
 	ucidef_set_led_usbport "usb1" "USB 1" "blue:usb-1" "usb3-port1" "usb4-port1"
 	;;
 

@@ -210,36 +210,20 @@ define Device/fiberhome_hg5585f-ct
 endef
 TARGET_DEVICES += fiberhome_hg5585f-ct
 
+# CU (Unicom) variant shares the HG5585F UBI layout and common MT7916D platform,
+# but uses its own CU DTS and internal switch PHY mapping.
 define Device/fiberhome_hg5585f-cu
   $(call Device/fiberhome_hg5585f-common)
   DEVICE_MODEL := HG5585F
   DEVICE_VARIANT := CU
   DEVICE_DTS := an7581-fiberhome-hg5585f-cu
-  SUPPORTED_DEVICES += fiberhome,hg5585f-cu-usb-sfp
   $(call Device/fiberhome_hg5585f-images)
 endef
 TARGET_DEVICES += fiberhome_hg5585f-cu
 
-define Device/fiberhome_hg5585f-ct-usb-sfp
-  $(call Device/fiberhome_hg5585f-common)
-  DEVICE_MODEL := HG5585F
-  DEVICE_VARIANT := CT-USB-SFP
-  DEVICE_DTS := an7581-fiberhome-hg5585f-ct-usb-sfp
-  DEVICE_PACKAGES += kmod-phy-maxlinear
-  SUPPORTED_DEVICES += fiberhome,hg5585f-ct
-  $(call Device/fiberhome_hg5585f-images)
-endef
-TARGET_DEVICES += fiberhome_hg5585f-ct-usb-sfp
-
-define Device/fiberhome_hg5585f-cu-usb-sfp
-  $(call Device/fiberhome_hg5585f-common)
-  DEVICE_MODEL := HG5585F
-  DEVICE_VARIANT := CU-USB-SFP
-  DEVICE_DTS := an7581-fiberhome-hg5585f-cu-usb-sfp
-  SUPPORTED_DEVICES += fiberhome,hg5585f-cu
-  $(call Device/fiberhome_hg5585f-images)
-endef
-TARGET_DEVICES += fiberhome_hg5585f-cu-usb-sfp
+# Disabled: non-standard USB 3.0 / SFP variants are intentionally excluded.
+# TARGET_DEVICES += fiberhome_hg5585f-ct-usb-sfp
+# TARGET_DEVICES += fiberhome_hg5585f-cu-usb-sfp
 
 # Both models share the UBI boot chain and store device data in factory.
 define Device/znxt_zn50xg-d-common

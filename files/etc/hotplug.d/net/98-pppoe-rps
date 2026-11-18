@@ -1,0 +1,15 @@
+#!/bin/sh
+[ "$ACTION" = "add" ] || [ "$ACTION" = "bind" ] || [ "$ACTION" = "ifup" ] || exit 0
+
+dev="${DEVICENAME:-$INTERFACE}"
+case "$dev" in
+    pppoe-wan|phy0-ap0|phy1-ap0|pon0|eth0|lan*|br-lan|tun0|dae0)
+        sysctl -w net.core.rps_sock_flow_entries=32768 >/dev/null 2>&1
+        if [ -d "/sys/class/net/$dev/queues" ]; then
+            for q in /sys/class/net/$dev/queues/rx-*; do
+                [ -f "$q/rps_cpus" ] && echo d > "$q/rps_cpus" 2>/dev/null
+                [ -f "$q/rps_flow_cnt" ] && echo 4096 > "$q/rps_flow_cnt" 2>/dev/null
+            done
+        fi
+        ;;
+esac
