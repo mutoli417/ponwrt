@@ -430,6 +430,9 @@ jobs:
       #   均为未编入的叶子/门控包，基座 defconfig 全栈 not set，无启用包反向依赖；
       #   逐项依赖核对见《可选包裁剪核对方案.md》。目录在源码树内，feeds 重装不重建；
       #   必须在 feeds install -a 之前，扫描器才看不到缺依赖的 Makefile。
+      #   SELinux/audit 栈：audit、policycoreutils 已先裁，这里补裁引用它们的
+      #   libsemanage / refpolicy / selinux-policy，否则 defconfig 仍会报
+      #   libaudit、audit/host、policycoreutils/host 不存在。
       # =========================================================
       - name: Trim unused optional overlay packages
         run: |
@@ -442,6 +445,9 @@ jobs:
             package/network/services/lldpd \
             package/utils/pcat-manager \
             package/utils/policycoreutils \
+            package/libs/libsemanage \
+            package/system/refpolicy \
+            package/system/selinux-policy \
             2>/dev/null || true
 
       # =========================================================
@@ -457,7 +463,9 @@ jobs:
           ./scripts/feeds install -a
           # 无头 PON 路由不用 qt6 GUI；video feed 保留（mesa/wayland/graphene 由它提供，
           # gst1-plugins-base 依赖），只摘除缺 qt6base 子包的 qt6quick / qt6svg 索引目录。
-          rm -rf package/feeds/video/qt6quick package/feeds/video/qt6svg 2>/dev/null || true
+          # luci-app-lldpd 依赖的 lldpd 已在上方裁剪，前端索引一并摘除，避免缺依赖告警。
+          rm -rf package/feeds/video/qt6quick package/feeds/video/qt6svg \
+                 package/feeds/luci/luci-app-lldpd 2>/dev/null || true
 
       # =========================================================
       # 4.1 套用本地 PON 驱动 / 用户态补丁（激光恢复 / LOID 预览 / IPTV MAC 固化）
@@ -467,6 +475,20 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE"
           bash ./scripts/apply-pon-patches.sh
+
+      # =========================================================
+      # 4.2 摘除 ssr-plus 失效的 Kcptun 选项（kcptun-client 已不在任何 feed）
+      #   必须在 feeds install -a 之后（package/feeds/helloworld 此时才建立）。
+      #   缺脚本 / 缺 Makefile 只警告跳过，不阻断构建。
+      # =========================================================
+      - name: Drop stale ssr-plus Kcptun option
+        continue-on-error: true
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/patch-ssrplus-kcptun.sh"
+          [ -f "$S" ] || { echo "::warning::缺 $S，跳过"; exit 0; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
 
       # =========================================================
       # 5.5 放宽 rust 包的「禁止联网」（--frozen / --offline）
