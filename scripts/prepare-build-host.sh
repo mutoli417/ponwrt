@@ -47,7 +47,15 @@ set_cfg() { # $1=KEY  $2=值（空表示 is not set）
 #    runner 预装的 Go 作为 bootstrap，一步跳过全部自举。
 # ===============================================================
 GO_DONE=0
-GO_ROOT=$(go env GOROOT 2>/dev/null || true)
+# runner 的 Go 在 /opt/hostedtoolcache/go/<ver>/x64/bin 里，默认不进 PATH
+GO_BIN=$(command -v go 2>/dev/null || true)
+if [ -z "$GO_BIN" ]; then
+  for c in /opt/hostedtoolcache/go/*/x64/bin/go /opt/hostedtoolcache/go/*/arm64/bin/go \
+           /usr/local/go/bin/go /opt/go/bin/go "$HOME/go/bin/go"; do
+    [ -x "$c" ] && { GO_BIN="$c"; break; }
+  done
+fi
+GO_ROOT=$([ -n "$GO_BIN" ] && "$GO_BIN" env GOROOT 2>/dev/null || true)
 
 if [ -z "$GO_ROOT" ] || [ ! -x "$GO_ROOT/bin/go" ]; then
   warn "Go: runner 没有可用的 go，跳过 external bootstrap"
@@ -139,11 +147,20 @@ else
 fi
 
 # ===============================================================
-# 4. ccache —— 长期累计
+# 4. ccache —— 长期累计（opt-in，跟随 USE_CCACHE 环境变量）
+#
+#   workflow 的 "Setup ccache (opt-in)" 步骤已按 USE_CCACHE == 'true' 门控；
+#   这里若只要 .config 里存在 CONFIG_CCACHE 符号就置 y，会在未显式开启时
+#   把 ccache 强行打开。非 true 时显式置为 is not set，与门控保持一致。
 # ===============================================================
-if grep -q 'CONFIG_CCACHE' .config 2>/dev/null; then
-  set_cfg CONFIG_CCACHE "y"
-  log "ccache : ✅ 已启用"
+if [ "${USE_CCACHE:-false}" = "true" ]; then
+  if grep -q 'CONFIG_CCACHE' .config 2>/dev/null; then
+    set_cfg CONFIG_CCACHE "y"
+    log "ccache : ✅ 已启用"
+  fi
+else
+  set_cfg CONFIG_CCACHE ""
+  log "ccache : 未启用（USE_CCACHE != true）"
 fi
 
 log ""
