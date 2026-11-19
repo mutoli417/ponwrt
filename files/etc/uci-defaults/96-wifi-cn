@@ -1,6 +1,6 @@
 #!/bin/sh
 # 无线 WiFi 默认值：2.4G/5G 国家码 CN、5G 信道 auto、频宽 160MHz
-# 由 diy-part2.sh 生成（编译期常量注入）
+# 仓库 files/ 覆盖层脚本：国家码 / 信道 / 频宽在此静态写入
 
 COUNTRY_24G='CN'
 CHANNEL_24G='auto'
