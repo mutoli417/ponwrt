@@ -592,7 +592,16 @@ jobs:
           else
             echo "ℹ 未找到 ${PROFILE} 对应的配置脚本，跳过"
           fi
-          # 通用单设备裁剪：上面 kconfig.pl 用 '>' 重新生成 .config，会冲掉
+          # kconfig.pl 重新生成 .config 时只合并了 SoC 基座 + release.config，
+          # Load custom configuration 阶段追加的机型配置会被冲掉；这里在 defconfig
+          # 前补回（机型配置不存在时回退 SoC 通用配置）。
+          if [ -e "$WS/${CONFIG_FILE}" ]; then
+            cat "$WS/${CONFIG_FILE}" >> .config
+            echo "✅ 补回机型配置: ${CONFIG_FILE}"
+          elif [ -e "$WS/configs/${SOC}.config" ]; then
+            cat "$WS/configs/${SOC}.config" >> .config
+          fi
+          # 通用单设备裁剪：上面 kconfig.pl 重新生成 .config，会冲掉
           # Apply device profile 的裁剪，且多数机型没有 gen 脚本。这里在 defconfig
           # 前强制再裁一次，确保只编译选定机型（PROFILE=all 时保留基座全部设备）。
           if [ "${PROFILE}" != "all" ]; then
@@ -619,9 +628,9 @@ jobs:
           echo "🔒 强制启用 SSR Plus+..."
           sed -i '/luci-app-ssr-plus/d' .config 2>/dev/null || true
           echo "CONFIG_PACKAGE_luci-app-ssr-plus=y" >> .config
-          # 安装 SSR Plus+ 依赖的内核（避免没有内核导致反复重启）
-          echo "CONFIG_PACKAGE_xray-core=y" >> .config
-          echo "CONFIG_PACKAGE_sing-box=y" >> .config
+          # 注：xray-core / sing-box 不随 SSR Plus+ 在此强制编入 —— 基座配置两者
+          # 均为 is not set；SSR Plus+ 实际使用的内核由其自身 INCLUDE 选项在
+          # defconfig 阶段解析，不在 defconfig 之后追加独立包符号（绕过依赖解析）。
 
           # 优化：禁用 SSR Plus+ 首启时的防火墙规则修改，避免 WiFi 能连但不能上网
           echo "🔧 优化 SSR Plus+ 首启配置（删除 uci-defaults 防火墙脚本）..."
