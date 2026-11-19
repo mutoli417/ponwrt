@@ -82,7 +82,7 @@ cmd_prefix() {
 
 # ---------------------------------------------------------------
 # key —— 前缀 + 上游提交号
-# ⚠ 刻意不把 .config / configs/*.config / diy-part*.sh 算进 key：那些只影响
+# ⚠ 刻意不把 .config / configs/*.config 算进 key：那些只影响
 #   target 侧编哪些包，不影响 host 工具链与 hostpkg；算进去就退化成「指纹一变
 #   就全量重编」。target 侧每次都要重编，要复用请用 ccache。
 # ⚠ 也不把机型算进前缀：前缀是 subtarget 级的，同 SoC 下所有机型共用一份。
