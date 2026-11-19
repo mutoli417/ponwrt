@@ -3,7 +3,6 @@ run-name: Build PonWrt #${{ github.run_attempt }}
 
 env:
   FW_AUTHOR: ${{ github.event.inputs.fw_author || 'ponwrt' }}
-  FEEDS_CONF: ''
   UPLOAD_BIN_DIR: false
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: ${{ github.event.inputs.upload_release || 'true' }}
@@ -456,13 +455,10 @@ jobs:
       - name: Update & install feeds
         run: |
           cd "$GITHUB_WORKSPACE"
-          if [ -n "${FEEDS_CONF}" ] && [ -e "$GITHUB_WORKSPACE/${FEEDS_CONF}" ]; then
-            cp "$GITHUB_WORKSPACE/${FEEDS_CONF}" feeds.conf.default
-          fi
           ./scripts/feeds update -a
           ./scripts/feeds install -a
-          # 无头 PON 路由不用 qt6 GUI；video feed 保留（mesa/wayland/graphene 由它提供，
-          # gst1-plugins-base 依赖），只摘除缺 qt6base 子包的 qt6quick / qt6svg 索引目录。
+          # 无头 PON 路由不用 qt6 GUI；video feed 索引保留，但当前启用包均不依赖
+          # mesa/wayland/graphene/gstreamer，只摘除缺 qt6base 子包的 qt6quick / qt6svg 索引目录。
           # luci-app-lldpd 依赖的 lldpd 已在上方裁剪，前端索引一并摘除，避免缺依赖告警。
           rm -rf package/feeds/video/qt6quick package/feeds/video/qt6svg \
                  package/feeds/luci/luci-app-lldpd 2>/dev/null || true
@@ -591,7 +587,7 @@ jobs:
           fi
 
       # =========================================================
-      # 8. 设置环境变量（diy-part2.sh 已移除，源码库直接编译）
+      # 8. 设置环境变量
       # =========================================================
       - name: Set build env vars
         run: |
@@ -606,7 +602,7 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           WS="$GITHUB_WORKSPACE"
           bash "$WS/scripts/patch-luci-version.sh"
-          # 按 SoC 选择配置文件（不再硬编码 an7581）
+          # 按 SoC 选择配置文件
           ./scripts/kconfig.pl + "configs/${SOC}.config" "$WS/configs/release.config" > .config
           # 按机型选择专属配置生成脚本（无专属脚本时走后面的通用单设备裁剪）
           if [ -f "$WS/scripts/gen-${PROFILE}.sh" ]; then
@@ -1071,7 +1067,7 @@ jobs:
           # ⚠ 这里【不】跑 make defconfig：
           #   1) rules.mk 是直接解析 .config 里的 CONFIG_CCACHE，不需要 kconfig 展开；
           #   2) 步骤 9 的注释写明「唯一一次 defconfig」，这里再跑一次会把
-          #      diy-part2.sh 之后写进 .config 的选择重新展开一遍，正是那条
+          #      defconfig 之后写进 .config 的选择重新展开一遍，正是那条
           #      注释要避免的事；
           #   3) 原来那行还带 `|| true`，连失败都看不见（同 P0：管道/短路吞错）。
           sed -i '/^CONFIG_CCACHE=/d; /^# CONFIG_CCACHE is not set/d' .config
