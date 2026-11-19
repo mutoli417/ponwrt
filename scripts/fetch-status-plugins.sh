@@ -49,6 +49,7 @@ install_pkg() { # install_pkg <pkg> <src_dir>
   fi
   rm -rf "$PKG_DIR/$p"
   cp -r "$src/$p" "$PKG_DIR/"
+  rm -rf "$PKG_DIR/$p/.git"
   echo "✅ $p 已就位: package/custom/$p"
 }
 
@@ -69,6 +70,7 @@ fi
 if clone "$NPU_URL" "$TMP/airoha-npu"; then
   rm -rf "$PKG_DIR/luci-app-airoha-npu"
   cp -r "$TMP/airoha-npu" "$PKG_DIR/luci-app-airoha-npu"
+  rm -rf "$PKG_DIR/luci-app-airoha-npu/.git"
   echo "✅ luci-app-airoha-npu 已就位: package/custom/luci-app-airoha-npu"
 else
   echo "::warning::拉取 $NPU_URL 失败，沿用 custom-packages.zip 预置目录"
