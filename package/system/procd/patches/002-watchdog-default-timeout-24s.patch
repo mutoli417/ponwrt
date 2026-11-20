@@ -1,0 +1,10 @@
+diff --git a/watchdog.c b/watchdog.c
+--- a/watchdog.c
++++ b/watchdog.c
+@@ -31,5 +31,5 @@
+ static struct uloop_timeout wdt_timeout;
+ static int wdt_fd = -1;
+-static int wdt_drv_timeout = 30;
++static int wdt_drv_timeout = 24;
+ static int wdt_frequency = 5;
+ static bool wdt_magicclose = false;
