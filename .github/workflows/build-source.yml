@@ -510,6 +510,23 @@ jobs:
           bash "$S" "$GITHUB_WORKSPACE"
 
       # =========================================================
+      # 4.4 HomeProxy 连接检查改为经 mixed 代理探测
+      #   后端 connection_check 原为本机直连 wget，本机直连 Google 被墙恒显
+      #   「谷歌失败」，与代理出站是否正常无关。注入 https_proxy 走本机
+      #   mixed 入站 127.0.0.1:5330，检查真实代理链路：代理正常→绿，
+      #   主节点/代理故障→红。必须在 feeds install -a 之后（feed 索引才建立）。
+      #   缺脚本 / 缺包只警告跳过，不阻断构建。
+      # =========================================================
+      - name: HomeProxy check via proxy
+        continue-on-error: true
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/patch-homeproxy-check-via-proxy.sh"
+          [ -f "$S" ] || { echo "::warning::缺 $S，跳过"; exit 0; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
+
+      # =========================================================
       # 5.5 放宽 rust 包的「禁止联网」（--frozen / --offline）
       #   dl/cargo 是从缓存继承的（只增不减），上游在 Cargo.lock 加新依赖时
       #   缓存里没有 → `--frozen` 不给补救机会，编到 rust 包必挂：
