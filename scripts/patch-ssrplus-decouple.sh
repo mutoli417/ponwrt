@@ -16,11 +16,14 @@
 #     不杀核心进程、不碰 dnsmasq；WAN ifup 后转发/DNS 不断。
 #     保留 ifup / wan / pppoe 判断、锁文件与 sleep 10（等 WAN 规则就绪）。
 #
-#   待办（层 B/C/E，暂不改动，待方案确认后再补）：
-#     - 层 B：ssr-monitor 五处整重启（redir tcp/udp、server、local、builtin dns）
-#       改局部补拉；当前维持现状。
-#     - 层 C：start/stop 内两处 dnsmasq restart 是手动启停/切节点后让注入
-#       生效所必需，不删除；日常 ifup 已不再走 start/stop。
+#   配套决策（已定稿，本脚本不改动这些分支）：
+#     - 层 B（B3 定稿）：ssr-monitor 五处整重启（redir tcp/udp、server、local、
+#       builtin dns）维持现状，作为进程真正崩溃时的兜底自愈；不做局部补拉重构。
+#       理由：load_config 耦合实例编排、跨协议分支多，builtin dns 无法脱离核心；
+#       线上整重启均来自 ifup 钩子（层 A 已解耦），monitor 路径极少触发。
+#       若日后日志反复出现 error.restart! 前缀，再单点局部化对应分支。
+#     - 层 C：start/stop 内两处 dnsmasq restart 是手动启停/切节点后让注入生效
+#       所必需，不删除；日常 ifup 已不再走 start/stop。
 #     - 层 E：check_server 节点类型异常的自愈 restart 保留。
 #
 #   幂等：重复执行不会二次改动；钩子缺失只警告不阻断。
