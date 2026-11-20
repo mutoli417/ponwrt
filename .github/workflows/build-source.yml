@@ -462,6 +462,15 @@ jobs:
           # luci-app-lldpd 依赖的 lldpd 已在上方裁剪，前端索引一并摘除，避免缺依赖告警。
           rm -rf package/feeds/video/qt6quick package/feeds/video/qt6svg \
                  package/feeds/luci/luci-app-lldpd 2>/dev/null || true
+          # SELinux 栈：基座 libsemanage / policycoreutils 已在上方裁剪，packages feed 里
+          # 依赖它们的 Python 绑定包一并摘除，否则 defconfig 报
+          # "dependency on 'libsemanage' which does not exist"：
+          #   · python-semanage 直接依赖被删的 libsemanage（当前唯一告警源）；
+          #   · selinux-python 源包子包链式依赖 python3-semanage / selinux-semanage，
+          #     整源包摘除，避免删掉 python-semanage 后连带冒出新缺依赖告警。
+          # python-selinux / setools 依赖基座仍在的 libselinux/libsepol，保留不摘。
+          rm -rf package/feeds/packages/python-semanage \
+                 package/feeds/packages/selinux-python 2>/dev/null || true
 
       # =========================================================
       # 4.1 套用本地 PON 驱动 / 用户态补丁（激光恢复 / LOID 预览 / IPTV MAC 固化）
