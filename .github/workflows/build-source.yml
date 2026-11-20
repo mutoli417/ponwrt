@@ -496,6 +496,20 @@ jobs:
           bash "$S" "$GITHUB_WORKSPACE"
 
       # =========================================================
+      # 4.3 ssr-plus 钩子解耦：WAN ifup 不再整重启服务，只恢复 nft 规则
+      #   必须在 feeds install -a 之后（package/feeds/helloworld 此时才建立）。
+      #   缺脚本 / 缺钩子只警告跳过，不阻断构建。
+      # =========================================================
+      - name: Decouple ssr-plus hotplug restart
+        continue-on-error: true
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/patch-ssrplus-decouple.sh"
+          [ -f "$S" ] || { echo "::warning::缺 $S，跳过"; exit 0; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
+
+      # =========================================================
       # 5.5 放宽 rust 包的「禁止联网」（--frozen / --offline）
       #   dl/cargo 是从缓存继承的（只增不减），上游在 Cargo.lock 加新依赖时
       #   缓存里没有 → `--frozen` 不给补救机会，编到 rust 包必挂：
