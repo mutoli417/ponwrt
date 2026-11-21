@@ -527,6 +527,20 @@ jobs:
           bash "$S" "$GITHUB_WORKSPACE"
 
       # =========================================================
+      # 4.5 HomeProxy 本地规则集加固：三个内置规则集 remote→本地 .srs、
+      #   客户端 jail 补挂 ruleset 目录、客户端实例 respawn 放宽 3600 10 10。
+      #   缺脚本 / 缺包只警告跳过，不阻断构建。
+      # =========================================================
+      - name: HomeProxy local-ruleset hardening
+        continue-on-error: true
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/patch-homeproxy-local-ruleset.sh"
+          [ -f "$S" ] || { echo "::warning::缺 $S，跳过"; exit 0; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
+
+      # =========================================================
       # 5.5 放宽 rust 包的「禁止联网」（--frozen / --offline）
       #   dl/cargo 是从缓存继承的（只增不减），上游在 Cargo.lock 加新依赖时
       #   缓存里没有 → `--frozen` 不给补救机会，编到 rust 包必挂：
