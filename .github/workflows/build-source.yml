@@ -540,6 +540,17 @@ jobs:
           dos2unix "$S" 2>/dev/null || true
           bash "$S" "$GITHUB_WORKSPACE"
 
+      # 4.6 HomeProxy 混合双栈补丁：DNS 全局 ipv4_only（国内规则 prefer_ipv6
+      #     覆盖保留双栈），logical and 兜底阻断非 CN IPv6。幂等，缺包只警告跳过。
+      - name: HomeProxy v6-hybrid patch
+        continue-on-error: true
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/patch-homeproxy-v6hybrid.sh"
+          [ -f "$S" ] || { echo "::warning::缺 $S，跳过"; exit 0; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
+
       # =========================================================
       # 5.5 放宽 rust 包的「禁止联网」（--frozen / --offline）
       #   dl/cargo 是从缓存继承的（只增不减），上游在 Cargo.lock 加新依赖时
