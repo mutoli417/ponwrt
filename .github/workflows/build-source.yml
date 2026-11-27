@@ -560,6 +560,17 @@ jobs:
           dos2unix "$S" 2>/dev/null || true
           bash "$S" "$GITHUB_WORKSPACE"
 
+      # HomeProxy SmartDNS 接入（B 方案 5334 统一递归引擎）：追加 local-dns 本地
+      # 递归器；main-out 解析器与 dnsmasq 上游按 smartdns_enabled 开关条件切到
+      # 5334，默认关，保持 5333 main-dns race 主路径。幂等，包整体缺失警告跳过。
+      - name: HomeProxy smartdns patch
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          S="$GITHUB_WORKSPACE/scripts/patch-homeproxy-smartdns.sh"
+          [ -f "$S" ] || { echo "::error::缺 $S，构建中止"; exit 1; }
+          dos2unix "$S" 2>/dev/null || true
+          bash "$S" "$GITHUB_WORKSPACE"
+
       # =========================================================
       # 5.5 放宽 rust 包的「禁止联网」（--frozen / --offline）
       #   dl/cargo 是从缓存继承的（只增不减），上游在 Cargo.lock 加新依赖时
