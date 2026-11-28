@@ -7,9 +7,7 @@
 
 case "$(board_name)" in
 fiberhome,hg5585f-ct|\
-fiberhome,hg5585f-ct-usb-sfp|\
-fiberhome,hg5585f-cu|\
-fiberhome,hg5585f-cu-usb-sfp)
+fiberhome,hg5585f-cu)
 	;;
 *)
 	exit 0
