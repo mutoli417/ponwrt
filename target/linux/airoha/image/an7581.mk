@@ -205,7 +205,6 @@ define Device/fiberhome_hg5585f-ct
   DEVICE_VARIANT := CT
   DEVICE_DTS := an7581-fiberhome-hg5585f-ct
   DEVICE_PACKAGES += kmod-phy-maxlinear
-  SUPPORTED_DEVICES += fiberhome,hg5585f-ct-usb-sfp
   $(call Device/fiberhome_hg5585f-images)
 endef
 TARGET_DEVICES += fiberhome_hg5585f-ct
@@ -221,9 +220,8 @@ define Device/fiberhome_hg5585f-cu
 endef
 TARGET_DEVICES += fiberhome_hg5585f-cu
 
-# Disabled: non-standard USB 3.0 / SFP variants are intentionally excluded.
-# TARGET_DEVICES += fiberhome_hg5585f-ct-usb-sfp
-# TARGET_DEVICES += fiberhome_hg5585f-cu-usb-sfp
+# USB 3.0 / SFP variants are dropped from this fork; only the standard
+# CT and CU HG5585F builds are shipped.
 
 # Both models share the UBI boot chain and store device data in factory.
 define Device/znxt_zn50xg-d-common
